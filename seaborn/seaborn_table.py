@@ -1055,7 +1055,8 @@ class SeabornTable(object):
         :return: SeabornTable
         """
         if file_path and os.path.exists(file_path):
-            text = open(file_path, 'r').read()
+            with open(file_path, 'r') as fp:
+                text = fp.read()
 
         data = []
         text = text.replace('\r\n', '\n').replace('\r', '\n').strip()
