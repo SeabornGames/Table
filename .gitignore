@@ -2,6 +2,6 @@
 .idea/*
 .DS_Store
 *.egg-info
-.pyirc
 build/*
 dist/*
+.pypirc

@@ -17,7 +17,6 @@ setup(
     py_modules=['seaborn.seaborn_table'],
     license='MIT License',
     classifiers=(
-        'Development Status :: 1 - Beta',
         'Intended Audience :: Developers',
         'Natural Language :: English',
         'License :: Other/Proprietary License',
