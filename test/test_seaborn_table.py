@@ -8,9 +8,10 @@ from test_chain import TestChain, unittest
 log = logging.getLogger(__file__)
 
 logging.basicConfig(level=logging.DEBUG,
-                    handlers=logging.StreamHandler(sys.__stdout__))
+                    format="%(message)s",
+                    handlers=[logging.StreamHandler(sys.__stdout__)])
 
-PATH = os.path.split(__file__)[0]
+PATH = os.path.split(os.path.abspath(__file__))[0]
 
 
 class ExampleTableTest(TestChain):
@@ -38,6 +39,9 @@ class ExampleTableTest(TestChain):
                             for row in cls.answer.split('\n')]
         cls.list_of_list[0][4] += ' '
 
+    def setUp(self):
+        self.maxDiff = None
+
     def test_pertibate(self):
         def row_filter(**kwargs):
             if (kwargs['column 1'] == 1 and
@@ -47,17 +51,15 @@ class ExampleTableTest(TestChain):
             return True
 
         table = SeabornTable.pertibate_to_obj(
-            columns=['#', 'column 1', 'col2', 'column 3', 'output column', 'output col2'],
-            given={'col2': ['Hello', 'World'], 'column 3': ['a', 'b', 'c']},
-            when={'column 1': [1, 2]},
-            then={'output column': ['bla', '01234567890123'], 'output col2': lambda **kwargs: kwargs['column 1']},
-            pertibate_columns=['column 1', 'col2', 'column 3'],
+            columns=['#', 'column 1', 'col2', 'column 3', 'output column ', 'output col2'],
+            pertibate_values={'column 1': [1, 2],
+                              'col2': ['Hello', 'World'],
+                              'column 3': ['a', 'b', 'c']},
+            generated_columns={'output col2': lambda **kwargs: kwargs['column 1'],
+                               '#': lambda _row_index, **kwargs: _row_index},
             filter_func=row_filter,
             max_size=100)
-
-        table.set_column('output column', '')
-        assert str(table) == self.answer, \
-            'The pertibate table is wrong::\n\n%s' % table
+        self.assertEqual(str(table), self.answer)
         return table
 
     def test_sort_by_key(self):
@@ -78,20 +80,18 @@ class ExampleTableTest(TestChain):
             | 10 | 2        | World | c        |                | 2           |
         """.strip().replace('\n            ', '\n')
         log.debug(str(table))
-        assert str(table) == answer
+        self.assertEqual(str(table), answer)
 
     def test_list_of_list(self):
         table = SeabornTable(self.list_of_list)
-        assert str(table) == self.answer, \
-            'The list_of_list table is wrong::\n\n%s' % table
+        self.assertEqual(str(table), self.answer)
 
     def test_list_of_dict(self):
         columns = self.list_of_list[0]
         list_of_dict = [{k: row[i] for i, k in enumerate(columns)}
                         for row in self.list_of_list[1:]]
         table = SeabornTable(list_of_dict, columns)
-        assert str(table) == self.answer, \
-            'The list_of_dict table is wrong::\n\n%s' % table
+        self.assertEqual(str(table), self.answer)
 
     def test_dict_of_dict(self):
         columns = self.list_of_list[0]
@@ -99,8 +99,7 @@ class ExampleTableTest(TestChain):
         for i, row in enumerate(self.list_of_list[1:]):
             dict_of_dict[i] = {k: row[i] for i, k in enumerate(columns)}
         table = SeabornTable(dict_of_dict, columns)
-        assert str(table) == self.answer, \
-            'The list_of_list table is wrong::\n\n%s' % table
+        self.assertEqual(str(table), self.answer)
 
     def test_dict_of_list(self):
         columns = self.list_of_list[0]
@@ -108,26 +107,32 @@ class ExampleTableTest(TestChain):
         for i, k in enumerate(columns):
             dict_of_list[k] = [row[i] for row in self.list_of_list[1:]]
         table = SeabornTable(dict_of_list, columns)
-        assert str(table) == self.answer, \
-            'The dict_of_list table is wrong::\n\n%s' % table
+        self.assertEqual(str(table), self.answer)
         table.reverse()
 
     def test_excel_csv(self):
         table = SeabornTable([['aaa', 'a_b_c', 'c'],
                               [1, '2\n2', '3'],
                               ['4', '5', '6']])
-        file_path = os.path.join(os.getcwd(), 'test_excel_csv.csv')
+        file_path = os.path.join(PATH, 'test_excel_csv.csv')
         text = table.obj_to_csv(space_columns=True)
-        open(file_path, 'w').write(text)
+        with open(file_path, 'w') as f:
+            f.write(text)
         table2 = SeabornTable.csv_to_obj(file_path=file_path)
         table2.naming_convention_columns("underscore")
-        log.debug(table)
-        log.debug(str(table2))
         self.assertEqual(table, table2, 'Write then Read changed the data')
+        os.remove(file_path)
 
     def test_html(self):
         table = self.test_pertibate()
-        open('test_pertibate.html', 'w').write(table.obj_to_html())
+        answer_file = os.path.join(PATH, 'data', 'test_pertibate.html')
+        with open(answer_file,'r') as f:
+            answer = f.read()
+        file_path = os.path.join(PATH, 'test_pertibate.html')
+        # with open(file_path, 'w') as f:
+        #     f.write(table.obj_to_html())
+        self.assertEqual(answer, table.obj_to_html())
+        # os.remove(file_path)
 
     def test_mark_down(self):
         """
@@ -149,11 +154,13 @@ class ExampleTableTest(TestChain):
         text = text.replace("```\n# comment\n```", "").strip()
         for word in ':- ':
             text = text.replace(word, '')
+            testing = text.replace(word, '')
         testing = testing.replace(word, '')
 
         self.assertEqual(
             testing, text,
             "Values don't match:\n%s\n%s" % (repr(testing), repr(text)))
 
-        if __name__ == '__main__':
-            unittest.main()
+
+if __name__ == '__main__':
+    unittest.main()

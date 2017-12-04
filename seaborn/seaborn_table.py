@@ -18,21 +18,25 @@ from collections import OrderedDict
 from functools import reduce
 
 if sys.version_info[0] == 2:
-    xrange = range
-
 
     class by_key(object):
-        def __init__(self, keys):
+        def __init__(self, keys, place_holder=None):
             self.keys = isinstance(keys, list) and keys or [keys]
 
         def __call__(self, obj1, obj2):
             for key in self.keys:
+                low_to_high = 1
+                if key[0] == '-':
+                    low_to_high = -1
+                    key = key[1:]
+
                 if obj1[key] > obj2[key]:
-                    return 1
+                    return low_to_high
                 if obj1[key] < obj2[key]:
-                    return -1
+                    return 0 - low_to_high
             return 0
 else:
+    xrange = range
     basestring = str
     unicode = str
 
@@ -43,7 +47,14 @@ else:
             self.comp = comp or (lambda x: x)
 
         def __call__(self, obj):
-            return [self.comp(obj[k]) for k in self.keys]
+            ret = []
+            for key in self.keys:
+                low_to_high = 1
+                if key[0] == '-':
+                    low_to_high = -1
+                    key = key[1:]
+                ret.append(self.comp(obj[key]) * low_to_high)
+            return ret
 
 
 class SeabornTable(object):
@@ -54,7 +65,7 @@ class SeabornTable(object):
         """
         :param table: obj can be list of list or list of dict or any combination
         :param columns: list of str of the columns in the table
-        :param row_columns: columns of the list if different then visible columns on output
+        :param row_columns: list of str of the columns in the data if different then visible columns on output
         :param tab: str to include before every row
         :param key_on: tuple of str if assigned then the table can be accessed as a dict
         """
@@ -68,7 +79,8 @@ class SeabornTable(object):
             self.row_columns = columns or row_columns or []
             self.table = []
         elif isinstance(table, SeabornTable):
-            self.row_columns = table[0]._columns + []
+            columns = columns or table._columns.copy()
+            self.row_columns = table.row_columns
             self.table = [SeabornRow(self.row_columns, list(row))
                           for row in table]
         elif isinstance(table, list) and isinstance(table[0], SeabornRow):
@@ -93,6 +105,11 @@ class SeabornTable(object):
         self.tab = tab
         self.key_on = key_on
         self._columns = columns or self.row_columns
+
+        for column in self._columns:
+            if column not in self.row_columns:
+                self.insert(None, column, None)
+        self.assert_valid()
 
     def __add__(self, other):
         new_row_columns = self.row_columns + [c for c in other.row_columns
@@ -177,7 +194,7 @@ class SeabornTable(object):
             table = [SeabornRow(row_columns, row) for row in list_]
 
         else:
-            row_columns = ['LIST'] or columns
+            row_columns = columns or []
             table = [SeabornRow(row_columns, [row]) for row in list_]
 
         return cls(table, columns, row_columns, tab, key_on)
@@ -229,6 +246,18 @@ class SeabornTable(object):
                 columns.remove(key_on)
             columns = [key_on] + columns
         return columns
+
+    def assert_valid(self):
+        for c in self._columns:
+            if not c in self.row_columns:
+                raise Exception('Column "%s" is in columns but not in row_columns' % c)
+            if not isinstance(c, (str, basestring, unicode)):
+                raise Exception('Column "%s" is "%s" and not a string' % (c, type(c)))
+        for row in self:
+            if row.columns != self.row_columns:
+                raise Exception("Table row_columns does not match row columns: \n%s\n%s" % (self.row_columns, row))
+            if len(row) != len(self.row_columns):
+                raise Exception("Row is missing values compared to row columns: \n%s\n%s" % (self.row_columns, row))
 
     @property
     def columns(self):
@@ -330,27 +359,29 @@ class SeabornTable(object):
         self.table.remove(row)
 
     @classmethod
-    def pertibate_to_obj(cls, columns, given=None, when=None, then=None, pertibate_columns=None,
-                         filter_func=None, max_size=None):
+    def pertibate_to_obj(cls, columns, pertibate_values, generated_columns=None, filter_func=None,
+                         max_size=None):
         """
             This will create and add rows to the table by pertibating the
             parameters for the provided columns
         :param columns: list of str of columns in the table
-        :param pertibate_columns: list of str of columns to pertibate
+        :param pertibate_values: dict of {'column': [values]}
+        :param generated_columns: dict of {'column': func to generate row value from}
         :param filter_func: func to return False to filter out row
         :param max_size: int of the max size of the table
         :return: SeabornTable
         """
         table = cls(columns=columns)
-        table._setup_steps(given, when, then)
-        table.pertibate(pertibate_columns, filter_func, max_size)
+        table._parameters = pertibate_values.copy()
+        table._parameters.update(generated_columns or {})
+        table.pertibate(pertibate_values.keys(), filter_func, max_size)
         return table
 
     def pertibate(self, pertibate_columns=None, filter_func=None, max_size=None):
         """
         :param pertibate_columns: list of str fo columns to pertibate see DOE
         :param filter_func: func that takes a SeabornRow and return True if this row should be exist
-        :param max_size: int of the max size of the table
+        :param max_size: int of the max number of rows to try but some may be filtered out
         :return:  None
         """
         pertibate_columns = pertibate_columns or self.columns
@@ -375,29 +406,9 @@ class SeabornTable(object):
                 self.table.append(row)
 
         for c in self.columns:  # if the parameter is a dynamic function
-            if hasattr(self._parameters[c], '__call__'):
+            if hasattr(self._parameters.get(c, ''), '__call__'):
                 # noinspection PyTypeChecker
                 self.set_column(c, self._parameters[c])
-
-    def _setup_steps(self, given, when, then):
-        """
-        :param given: dict of list of values
-        :param when: dict of list of values
-        :param then: dict of list of values
-        """
-        # todo review
-        self.given = given or {}
-        self.when = when or {}
-        self.then = then or {}
-
-        self._parameters = {'#': lambda _row_index, **kwargs: _row_index}
-        self._parameters.update(self.given)
-        self._parameters.update(self.when)
-        self._parameters.update(self.then)
-        self._columns = self.columns or (
-            self.ordered_keys(self.given) +
-            self.ordered_keys(self.when) +
-            self.ordered_keys(self.then))
 
     def pertibate_value(self, index, column):
         # noinspection PyTypeChecker
@@ -435,7 +446,10 @@ class SeabornTable(object):
 
                 indexes[index] = 0
                 if index == len(column_size) - 1:
-                    raise StopIteration()
+                    if sys.version_info[0] == 2:
+                        raise StopIteration()
+                    else:
+                        return
 
     def row_to_str(self, row, width):
         """
@@ -505,16 +519,24 @@ class SeabornTable(object):
         :param compute_key: str of the column to send to computer_value_func instead of row
         :return: None
         """
-        self.row_columns.insert(index, column)
-        if self.row_columns is not self.columns and column not in self.columns:
-            self.columns.insert(index, column)
+        if index is None:
+            self.row_columns.append(column)
+            if self.row_columns is not self.columns and column not in self.columns:
+                self.columns.append(column)
+        else:
+            self.row_columns.insert(index, column)
+            if self.row_columns is not self.columns and column not in self.columns:
+                self.columns.insert(index, column)
+
         for row in self.table:
-            if values:
-                row.insert(index, values.pop(0))
-            else:
-                row.insert(index, default_value)
+            value = values.pop(0) if values else default_value
             if compute_value_func is not None:
-                row[index] = compute_value_func(row if compute_key is None else row[compute_key])
+                value = compute_value_func(row if compute_key is None else row[compute_key])
+
+            if index is None:
+                row.append(value)
+            else:
+                row.insert(index, value)
 
         self._parameters[column] = list(set(self.get_column(column)))
 
@@ -681,15 +703,6 @@ class SeabornTable(object):
                                                  len(self.row_columns))])
         return SeabornRow(self.row_columns, values)
 
-    @classmethod
-    def str_to_obj(cls, text, deliminator='|'):
-        text = text.strip().split('\n')
-        list_of_list = [[cell.strip() for cell in row.split(deliminator)]
-                        for row in text]
-        if list_of_list[0][0] == '' and list_of_list[0][-1] == '':
-            list_of_list = [row[1:-1] for row in list_of_list]
-        return cls(list_of_list)
-
     @property
     def parameters(self):
         return self._parameters
@@ -721,14 +734,16 @@ class SeabornTable(object):
         md.insert(1, [":" + '-' * (width - 1) for width in widths])
         md = ['| '.join([row[c].ljust(widths[c])
                          for c in range(len(row))]) for row in md]
+        string = '| ' + ' |\n| '.join(md) + ' |'
         return '| ' + ' |\n| '.join(md) + ' |'
 
     @classmethod
     def objs_to_mark_down(cls, tables, keys=None, pretty_columns=True):
         """
-        :param tables: dict of {str <name>:SeabornTable}
-        :param keys:   list of str of the order of keys to use
-        :return:       str of the converted markdown tables
+        :param tables:         dict of {str <name>:SeabornTable}
+        :param keys:           list of str of the order of keys to use
+        :param pretty_columns: bool if True will make the columns pretty
+        :return:               str of the converted markdown tables
         """
         keys = keys or tables.keys()
         ret = ['#### ' + key + '\n' + tables[key].obj_to_mark_down(pretty_columns=pretty_columns) for key in keys]
@@ -862,7 +877,7 @@ class SeabornTable(object):
         importing csv
         :param cell: obj to store in the cell
         :param quote_everything: bool to quote even if not necessary
-        :return:
+        :return: str
         """
         if cell is None:
             return ''
@@ -910,7 +925,8 @@ class SeabornTable(object):
         :return: SeabornTable
         """
         if file_path and os.path.exists(file_path):
-            text = open(file_path, 'rb').read()
+            with open(file_path, 'rb') as f:
+                text = f.read()
             if sys.version_info[0] == 3:
                 text = text.decode('utf-8')
         data = []
@@ -940,19 +956,61 @@ class SeabornTable(object):
                     else:
                         cell += ',' + cells[i]
                     i += 1
-                cell = cell.strip()
-                if cell and cell[0] == '"' and cell[-1] == '"':
-                    cell = cell[1:-1].replace('\xdf', '"')
-                elif cell.replace('.', '').isdigit():
-                    cell = eval(cell)
+                cell = self._eval_cell(cell, '\xdf')
 
                 row.append(cell)
             if not remove_empty_rows or True in [bool(r) for r in row]:
                 data.append(row)
 
-        ret = cls(data, key_on=key_on)
-        ret.columns = columns or ret.columns
+        ret = cls(data[1:], key_on=key_on, row_columns=data[0], columns=columns)
         return ret
+
+    @staticmethod
+    def _eval_cell(cell, quote_replacement=None):
+        cell = cell.strip()
+        if cell and cell[0] == '"' and cell[-1] == '"':
+            cell = cell[1:-1]
+
+        if quote_replacement is not None:
+            cell = cell.replace(quote_replacement,'"')
+        elif cell.replace('.', '').isdigit():
+            while cell.startswith('0') and cell != '0':
+                cell = cell[1:]
+            cell = eval(cell)
+        return cell
+
+    @classmethod
+    def str_to_obj(cls, file_path = '', text = '', columns = None, remove_empty_rows = True, key_on = None,
+                   row_columns=None, deliminator='\t', eval_cells=True):
+        """
+        This will convert a csv file or csv text into a seaborn table and return it
+        :param file_path: str of the path to the file
+        :param text: str of the csv text
+        :param columns: list of str of columns to use
+        :param remove_empty_rows: bool if True will remove empty rows which can happen in non-trimmed file
+        :param key_on: list of str of columns to key on
+        :param deliminator: str to use as a deliminator
+        :param eval_cells: bool if True will try to evaluate numbers
+        :return: SeabornTable
+        """
+        if file_path and os.path.exists(file_path):
+            with open(file_path, 'rb') as f:
+                text = f.read()
+            if sys.version_info[0] == 3:
+                text = text.decode('utf-8')
+
+        text = text.strip().split('\n')
+
+        eval_cell = cls._eval_cell if eval_cells else lambda x: x
+        list_of_list = [[eval_cell(cell) for cell in row.split(deliminator)]
+                        for row in text if not remove_empty_rows or True in [bool(r) for r in row]]
+
+        if list_of_list[0][0] == '' and list_of_list[0][-1] == '':
+            list_of_list = [row[1:-1] for row in list_of_list]
+
+        if row_columns is None:
+            row_columns = list_of_list.pop(0)
+        return cls(list_of_list, key_on=key_on, row_columns=row_columns, columns=columns)
 
     @classmethod
     def mark_down_to_dict_of_obj(cls, file_path='', text='', columns=None, key_on=None, ignore_code_blocks=True):
@@ -966,7 +1024,8 @@ class SeabornTable(object):
         :return: OrderedDict of {<header>: SeabornTable}
         """
         if file_path and os.path.exists(file_path):
-            text = open(file_path, 'r').read()
+            with open(file_path, 'r') as f:
+                text = f.read()
 
         ret = OrderedDict()
         paragraphs = text.split('####')
@@ -1019,6 +1078,10 @@ class SeabornTable(object):
         return cls(table=table[2:], columns=columns or table[0], key_on=key_on)
 
     def sort_by_key(self, keys=None):
+        """
+        :param keys: list of str to sort by, if name starts with - reverse order
+        :return: None
+        """
         keys = keys or self.key_on
         keys = keys if isinstance(keys, (list, tuple)) else [keys]
         if sys.version_info[0] == 2:
@@ -1032,7 +1095,7 @@ class SeabornTable(object):
 
 class SeabornRow(list):
     def __init__(self, columns, values):
-        super(SeabornRow, self).__init__(values)
+        super(SeabornRow, self).__init__(values + [None] * (len(columns) - len(values)))
         self._columns = columns
 
     def __getitem__(self, item):
@@ -1044,12 +1107,8 @@ class SeabornRow(list):
                     if self._columns[i] == item:  # this fixes a special case that didn't work for index
                         return self[i]
                 assert KeyError, item
-
         except Exception as e:
-            raise Exception(dict(original_error=str(e),
-                                 item=item,
-                                 columns=self._columns,
-                                 size=len(self)))
+            raise
 
     def __setitem__(self, item, value):
 
@@ -1116,26 +1175,3 @@ def safe_str(obj, repr_line_break=False):
             return str(obj)
     except Exception as e:
         return obj.encode('utf-8')
-
-
-if sys.version_info[0] == 2:
-    class by_key(object):
-        def __init__(self, keys):
-            self.keys = isinstance(keys, list) and keys or [keys]
-
-        def __call__(self, obj1, obj2):
-            for key in self.keys:
-                if obj1[key] > obj2[key]:
-                    return 1
-                if obj1[key] < obj2[key]:
-                    return -1
-            return 0
-else:
-
-    class by_key(object):
-        def __init__(self, keys, comp=None):
-            self.keys = isinstance(keys, list) and keys or [keys]
-            self.comp = comp or (lambda x: x)
-
-        def __call__(self, obj):
-            return [self.comp(obj[k]) for k in self.keys]
