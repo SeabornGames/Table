@@ -18,7 +18,6 @@ from collections import OrderedDict
 from functools import reduce
 
 if sys.version_info[0] == 2:
-
     class by_key(object):
         def __init__(self, keys, place_holder=None):
             self.keys = isinstance(keys, list) and keys or [keys]
@@ -927,8 +926,8 @@ class SeabornTable(object):
         if file_path and os.path.exists(file_path):
             with open(file_path, 'rb') as f:
                 text = f.read()
-            if sys.version_info[0] == 3:
-                text = text.decode('utf-8')
+        if sys.version_info[0] == 3 and isinstance(text, bytes):
+            text = text.decode('utf-8')
         data = []
         text = text.replace('\xdf', 'B')
         text = text.replace('\xef\xbb\xbf', '')
@@ -956,7 +955,7 @@ class SeabornTable(object):
                     else:
                         cell += ',' + cells[i]
                     i += 1
-                cell = self._eval_cell(cell, '\xdf')
+                cell = cls._eval_cell(cell, '\xdf')
 
                 row.append(cell)
             if not remove_empty_rows or True in [bool(r) for r in row]:
@@ -996,9 +995,8 @@ class SeabornTable(object):
         if file_path and os.path.exists(file_path):
             with open(file_path, 'rb') as f:
                 text = f.read()
-            if sys.version_info[0] == 3:
-                text = text.decode('utf-8')
-
+        if sys.version_info[0] == 3 and isinstance(text, bytes):
+            text = text.decode('utf-8')
         text = text.strip().split('\n')
 
         eval_cell = cls._eval_cell if eval_cells else lambda x: x
@@ -1027,6 +1025,8 @@ class SeabornTable(object):
             with open(file_path, 'r') as f:
                 text = f.read()
 
+        if sys.version_info[0] == 3 and isinstance(text, bytes):
+            text = text.decode('utf-8')
         ret = OrderedDict()
         paragraphs = text.split('####')
         for paragraph in paragraphs[1:]:
@@ -1057,7 +1057,8 @@ class SeabornTable(object):
         if file_path and os.path.exists(file_path):
             with open(file_path, 'r') as fp:
                 text = fp.read()
-
+        if sys.version_info[0] == 3 and isinstance(text, bytes):
+            text = text.decode('utf-8')
         data = []
         text = text.replace('\r\n', '\n').replace('\r', '\n').strip()
 
