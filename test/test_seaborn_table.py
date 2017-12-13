@@ -1,7 +1,7 @@
 import logging
 import os
 import sys
-
+import shutil
 from seaborn.seaborn_table import SeabornTable
 from test_chain import TestChain, unittest
 

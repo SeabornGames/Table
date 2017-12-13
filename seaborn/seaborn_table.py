@@ -39,11 +39,8 @@ if sys.version_info[0] == 2:
                     return 0 - low_to_high
             return 0
 else:
-    xrange = range
     basestring = str
     unicode = str
-
-
     class by_key(object):
         def __init__(self, keys, comp=None):
             self.keys = isinstance(keys, list) and keys or [keys]
@@ -62,15 +59,17 @@ else:
 
 class SeabornTable(object):
     MAX_SIZE = 1000
-    DELIMINATOR = ' | '
+    DELIMINATOR = '\t'
+    TAB = ''
 
-    def __init__(self, table=None, columns=None, row_columns=None, tab='', key_on=None):
+    def __init__(self, table=None, columns=None, row_columns=None, tab=None, key_on=None, deliminator=None):
         """
         :param table: obj can be list of list or list of dict or any combination
         :param columns: list of str of the columns in the table
         :param row_columns: list of str of the columns in the data if different then visible columns on output
         :param tab: str to include before every row
         :param key_on: tuple of str if assigned then the table can be accessed as a dict
+        :param deliminator: str to separate the columns such as , \t or |
         """
         if columns:
             columns = list(columns)
@@ -105,7 +104,8 @@ class SeabornTable(object):
             raise Exception("Unknown type of table")
 
         self._parameters = {}
-        self.tab = tab
+        self.tab = self.TAB if tab is None else tab
+        self.deliminator = self.DELIMINATOR if deliminator is None else deliminator
         self.key_on = key_on
         self._columns = columns or self.row_columns
 
@@ -434,15 +434,15 @@ class SeabornTable(object):
 
         index_order = [0]
         if mix_index:
-            for i in xrange(1, max(column_size)):
+            for i in range(1, max(column_size)):
                 index_order += [-1 * i, i]
         else:
-            index_order += xrange(1, max(column_size))
+            index_order += range(1, max(column_size))
 
-        for i in xrange(max_size):
-            yield [index_order[indexes[i]] for i in xrange(len(indexes))]
+        for i in range(max_size):
+            yield [index_order[indexes[i]] for i in range(len(indexes))]
 
-            for index in xrange(len(column_size)):
+            for index in range(len(column_size)):
                 indexes[index] += 1
                 if indexes[index] < column_size[index]:
                     break
@@ -471,7 +471,7 @@ class SeabornTable(object):
                                 enumerate(self._columns)]) + d).strip()
         except:
             return (d + d.join([str_(row[r]).ljust(width[r]) for r in
-                                xrange(len(width))]) + d).strip()
+                                range(len(width))]) + d).strip()
             # todo fix this
 
     def column_width(self, index=None, name=None, max_width=300):
@@ -606,7 +606,7 @@ class SeabornTable(object):
     def set_column(self, item, value=None):
         if hasattr(value, '__call__'):
             value = [value(_row_index=r, **self.table[r].obj_to_dict()) for r
-                     in xrange(len(self.table))]
+                     in range(len(self.table))]
         else:
             value = isinstance(value, list) and value or [value] * len(self)
 
@@ -756,7 +756,9 @@ class SeabornTable(object):
         ret = ['#### ' + key + '\n' + tables[key].obj_to_mark_down(pretty_columns=pretty_columns) for key in keys]
         return '\n\n'.join(ret)
 
-    def obj_to_str(self, file_path):
+    def obj_to_str(self, file_path, deliminator=None, tab=None):
+        self.deliminator = self.deliminator if deliminator is None else deliminator
+        self.tab = self.tab if tab is None else tab
         with open(file_path, 'w') as fp:
             fp.write(str(self))
 
@@ -783,6 +785,7 @@ class SeabornTable(object):
 
             for col in range(len(csv[0])):
                 widths.append(max([len_(row[col]) for row in csv]))
+            widths[-1] = 0
 
             csv = [','.join([row[c].ljust(widths[c])
                              for c in range(len(row))]) for row in csv]
@@ -959,7 +962,7 @@ class SeabornTable(object):
         else:
             lines = text.replace('""', '\xdf').split('\r\n')
 
-        for i in xrange(len(lines)):
+        for i in range(len(lines)):
             lines[i] = lines[i].replace('\r', '\n').replace('\\r', '\r').split(',')
         l = 0
         while l < len(lines):
@@ -995,7 +998,7 @@ class SeabornTable(object):
 
         if quote_replacement is not None:
             cell = cell.replace(quote_replacement,'"')
-        elif cell.replace('.', '').isdigit():
+        if cell.replace('.', '').isdigit():
             while cell.startswith('0') and cell != '0':
                 cell = cell[1:]
             cell = eval(cell)
@@ -1020,7 +1023,7 @@ class SeabornTable(object):
         elif file_path.endswith('html'):
             self.obj_to_html(file_path=file_path)
         elif file_path.endswith('md'):
-            self.obj_to_mark_down(file_path)
+            self.obj_to_mark_down(False, file_path=file_path)
         else:
             raise 'Unknown file type: %s'%file_path
 
@@ -1110,7 +1113,7 @@ class SeabornTable(object):
 
         if ignore_code_blocks:
             text = text.split("```")
-            for i in xrange(1, len(text), 2):
+            for i in range(1, len(text), 2):
                 text.pop(i)
             text = (''.join(text)).strip()
 
@@ -1140,6 +1143,10 @@ class SeabornTable(object):
     def reverse(self):
         self.table.reverse()
 
+    @staticmethod
+    def convert_file_type(source_file, destination_file):
+        table = SeabornTable.file_to_obj(source_file)
+        table.obj_to_file(destination_file)
 
 class SeabornRow(list):
     def __init__(self, columns, values):
@@ -1224,9 +1231,8 @@ def safe_str(obj, repr_line_break=False):
     except Exception as e:
         return obj.encode('utf-8')
 
-
 if __name__ == '__main__':
     if len(sys.argv) != 3:
         print(__doc__)
     else:
-        SeabornTable.file_to_obj(sys.argv[1]).obj_to_file(sys.argv[2])
+        SeabornTable.convert_file_type(sys.argv[1], sys.argv[2])
