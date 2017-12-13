@@ -1,6 +1,6 @@
 import os
 import shutil
-from unittest import TestCase
+import unittest
 
 from seaborn.seaborn_table import main
 
@@ -11,7 +11,7 @@ def file(folder, ext):
     return os.path.join(PATH, folder, 'test_file.%s' % ext)
 
 
-class FileConversionTest(TestCase):
+class FileConversionTest(unittest.TestCase):
     def file_conversion(self, source, dest):
         result_folder = os.path.join(PATH, source)
         if not os.path.exists(result_folder):
@@ -31,7 +31,6 @@ class FileConversionTest(TestCase):
             result = fp.read().replace('\r', '').split('\n')
 
         for i in range(len(result)):
-            print(result[i])
             self.assertEqual(expected[i], result[i],
                          "Failure creating filetype: %s" % ext)
 
@@ -70,8 +69,6 @@ class FileConversionTest(TestCase):
 
     def test_md_to_html(self):
         self.file_conversion('md', 'html')
-
-
 
 if __name__ == '__main__':
     unittest.main()

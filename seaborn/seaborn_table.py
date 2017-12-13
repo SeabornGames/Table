@@ -390,7 +390,7 @@ class SeabornTable(object):
     @classmethod
     def pertibate_to_obj(cls, columns, pertibate_values,
                          generated_columns=None, filter_func=None,
-                         max_size=None):
+                         max_size=None, deliminator=None):
         """
             This will create and add rows to the table by pertibating the
             parameters for the provided columns
@@ -399,9 +399,10 @@ class SeabornTable(object):
         :param generated_columns: dict of {'column': func}
         :param filter_func: func to return False to filter out row
         :param max_size: int of the max size of the table
+        :param deliminator: str to use as a deliminator when making a str
         :return: SeabornTable
         """
-        table = cls(columns=columns)
+        table = cls(columns=columns, deliminator=deliminator)
         table._parameters = pertibate_values.copy()
         table._parameters.update(generated_columns or {})
         table.pertibate(pertibate_values.keys(), filter_func, max_size)
@@ -491,7 +492,7 @@ class SeabornTable(object):
         :param width: list of int of the column width
         :return: str of the row in the behave table format | col 1 | col 2 |
         """
-        d = self.DELIMINATOR
+        d = self.deliminator
 
         def str_(obj):
             return '' if obj is None else safe_str(obj, True)
@@ -914,6 +915,7 @@ class SeabornTable(object):
         if file_path is not None:
             with open(file_path, 'w') as fp:
                 fp.write(ret)
+        return ret
 
     @staticmethod
     def html_cell(cell):

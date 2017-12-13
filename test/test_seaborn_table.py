@@ -60,12 +60,14 @@ class ExampleTableTest(TestChain):
                 'output col2': lambda **kwargs: kwargs['column 1'],
                 '#': lambda _row_index, **kwargs: _row_index},
             filter_func=row_filter,
+            deliminator=' | ',
             max_size=100)
-        self.assertEqual(str(table), self.answer)
+        self.assertEqual(self.answer, str(table))
         return table
 
     def test_sort_by_key(self):
         table = self.test_pertibate()
+        table.deliminator = ' | '
         table.sort_by_key(['column 1', 'column 3'])
         answer = """
             | #  | column 1 | col2  | column 3 | output column  | output col2 |
@@ -85,31 +87,35 @@ class ExampleTableTest(TestChain):
         self.assertEqual(str(table), answer)
 
     def test_list_of_list(self):
-        table = SeabornTable(self.list_of_list)
-        self.assertEqual(str(table), self.answer)
+        table = SeabornTable(self.list_of_list, deliminator=' | ')
+        self.assertEqual(self.answer, str(table))
 
     def test_list_of_dict(self):
         columns = self.list_of_list[0]
         list_of_dict = [{k: row[i] for i, k in enumerate(columns)}
                         for row in self.list_of_list[1:]]
-        table = SeabornTable(list_of_dict, columns)
-        self.assertEqual(str(table), self.answer)
+        table = SeabornTable(list_of_dict, columns, deliminator=' | ')
+        self.assertEqual(self.answer, str(table))
 
     def test_dict_of_dict(self):
         columns = self.list_of_list[0]
         dict_of_dict = {}
         for i, row in enumerate(self.list_of_list[1:]):
             dict_of_dict[i] = {k: row[i] for i, k in enumerate(columns)}
-        table = SeabornTable(dict_of_dict, columns)
-        self.assertEqual(str(table), self.answer)
+        table = SeabornTable(dict_of_dict, columns, deliminator=' | ')
+        log.debug('\nAnswer:\n%s\n\nResult:\n%s\n\n' % (
+            self.answer, str(table)))
+        self.assertEqual(self.answer, str(table))
 
     def test_dict_of_list(self):
         columns = self.list_of_list[0]
         dict_of_list = {}
         for i, k in enumerate(columns):
             dict_of_list[k] = [row[i] for row in self.list_of_list[1:]]
-        table = SeabornTable(dict_of_list, columns)
-        self.assertEqual(str(table), self.answer)
+        table = SeabornTable(dict_of_list, columns, deliminator=' | ')
+        log.debug('\nAnswer:\n%s\n\nResult:\n%s\n\n' % (
+            self.answer, str(table)))
+        self.assertEqual(self.answer, str(table))
         table.reverse()
 
     def test_excel_csv(self):
@@ -122,7 +128,10 @@ class ExampleTableTest(TestChain):
             f.write(text)
         table2 = SeabornTable.csv_to_obj(file_path=file_path)
         table2.naming_convention_columns("underscore")
-        self.assertEqual(table, table2, 'Write then Read changed the data')
+        log.debug('\nAnswer:\n%s\n\nResult:\n%s\n\n' % (
+            self.answer, str(table)))
+        self.assertEqual(str(table2), str(table),
+                         'Write then Read changed the data')
         os.remove(file_path)
 
     def test_html(self):
@@ -130,7 +139,9 @@ class ExampleTableTest(TestChain):
         answer_file = os.path.join(PATH, 'data', 'test_pertibate.html')
         with open(answer_file, 'r') as f:
             answer = f.read()
+        table.obj_to_html(file_path=os.path.join(PATH, 'test_pertibate.html'))
         self.assertEqual(answer, table.obj_to_html())
+        os.remove(os.path.join(PATH, 'test_pertibate.html'))
 
     def test_mark_down(self):
         """
@@ -155,9 +166,9 @@ class ExampleTableTest(TestChain):
             testing = text.replace(word, '')
         testing = testing.replace(word, '')
 
-        self.assertEqual(testing, text,
+        self.assertEqual(text, testing,
                          "Values don't match:\n%s\n%s" % (
-                         repr(testing), repr(text)))
+                             repr(testing), repr(text)))
 
 
 if __name__ == '__main__':
