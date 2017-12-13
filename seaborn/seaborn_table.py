@@ -259,8 +259,10 @@ class SeabornTable(object):
         for row in self:
             if row.columns != self.row_columns:
                 raise Exception("Table row_columns does not match row columns: \n%s\n%s" % (self.row_columns, row))
-            if len(row) != len(self.row_columns):
-                raise Exception("Row is missing values compared to row columns: \n%s\n%s" % (self.row_columns, row))
+            if len(row) > len(self.row_columns):
+                raise Exception("Row has more values then the SeabornTable columns: \n%s\n%s" % (self.row_columns, row))
+            if len(row) < len(self.row_columns):
+                raise Exception("Row has less values then the SeabornTable columns: \n%s\n%s" % (self.row_columns, row))
 
     @property
     def columns(self):
