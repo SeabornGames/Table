@@ -1007,13 +1007,13 @@ class SeabornTable(object):
         return cell
 
     @classmethod
-    def file_to_obj(cls, file_path):
+    def file_to_obj(cls, file_path, columns=None):
         if file_path.endswith('.txt'):
-            return cls.str_to_obj(file_path = file_path)
+            return cls.str_to_obj(file_path = file_path, columns=columns)
         elif file_path.endswith('.md'):
-            return cls.mark_down_to_obj(file_path = file_path)
+            return cls.mark_down_to_obj(file_path = file_path, columns=columns)
         elif file_path.endswith('.csv'):
-            return cls.csv_to_obj(file_path = file_path)
+            return cls.csv_to_obj(file_path = file_path, columns=columns)
         else:
             raise 'Unknown file type: %s'%file_path
 
@@ -1157,7 +1157,8 @@ class SeabornRow(list):
                 return list.__getitem__(self, item)
             else:
                 for i in range(len(self._columns)):
-                    if self._columns[i] == item:  # this fixes a special case that didn't work for index
+                    if self._columns[i] == item:
+                        # this fixes a special case that didn't work for index
                         return self[i]
                 assert KeyError, item
         except Exception as e:
