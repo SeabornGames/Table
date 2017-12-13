@@ -1143,10 +1143,6 @@ class SeabornTable(object):
     def reverse(self):
         self.table.reverse()
 
-    @staticmethod
-    def convert_file_type(source_file, destination_file):
-        table = SeabornTable.file_to_obj(source_file)
-        table.obj_to_file(destination_file)
 
 class SeabornRow(list):
     def __init__(self, columns, values):
@@ -1231,8 +1227,15 @@ def safe_str(obj, repr_line_break=False):
     except Exception as e:
         return obj.encode('utf-8')
 
+def main(source=None, destination=None):
+    if source == None and len(sys.argv) != 3:
+        print(globals()['__doc__'])
+        return
+    source = sys.argv[1] if source is None else source
+    destination = sys.argv[2] if destination is None else destination
+    table = SeabornTable.file_to_obj(source)
+    table.obj_to_file(destination)
+
+
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        print(__doc__)
-    else:
-        SeabornTable.convert_file_type(sys.argv[1], sys.argv[2])
+    main()
