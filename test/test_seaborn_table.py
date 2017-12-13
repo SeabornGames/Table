@@ -1,9 +1,10 @@
 import logging
 import os
 import sys
-import shutil
-from seaborn.seaborn_table import SeabornTable
+
 from test_chain import TestChain, unittest
+
+from seaborn.seaborn_table import SeabornTable
 
 log = logging.getLogger(__file__)
 
@@ -44,19 +45,20 @@ class ExampleTableTest(TestChain):
 
     def test_pertibate(self):
         def row_filter(**kwargs):
-            if (kwargs['column 1'] == 1 and
-                        kwargs['column 3'] == 'b' and
+            if (kwargs['column 1'] == 1 and kwargs['column 3'] == 'b' and
                         kwargs['col2'] == 'Hello'):
                 return False
             return True
 
         table = SeabornTable.pertibate_to_obj(
-            columns=['#', 'column 1', 'col2', 'column 3', 'output column ', 'output col2'],
+            columns=['#', 'column 1', 'col2', 'column 3', 'output column ',
+                     'output col2'],
             pertibate_values={'column 1': [1, 2],
                               'col2': ['Hello', 'World'],
                               'column 3': ['a', 'b', 'c']},
-            generated_columns={'output col2': lambda **kwargs: kwargs['column 1'],
-                               '#': lambda _row_index, **kwargs: _row_index},
+            generated_columns={
+                'output col2': lambda **kwargs: kwargs['column 1'],
+                '#': lambda _row_index, **kwargs: _row_index},
             filter_func=row_filter,
             max_size=100)
         self.assertEqual(str(table), self.answer)
@@ -126,13 +128,9 @@ class ExampleTableTest(TestChain):
     def test_html(self):
         table = self.test_pertibate()
         answer_file = os.path.join(PATH, 'data', 'test_pertibate.html')
-        with open(answer_file,'r') as f:
+        with open(answer_file, 'r') as f:
             answer = f.read()
-        file_path = os.path.join(PATH, 'test_pertibate.html')
-        # with open(file_path, 'w') as f:
-        #     f.write(table.obj_to_html())
         self.assertEqual(answer, table.obj_to_html())
-        # os.remove(file_path)
 
     def test_mark_down(self):
         """
@@ -157,9 +155,9 @@ class ExampleTableTest(TestChain):
             testing = text.replace(word, '')
         testing = testing.replace(word, '')
 
-        self.assertEqual(
-            testing, text,
-            "Values don't match:\n%s\n%s" % (repr(testing), repr(text)))
+        self.assertEqual(testing, text,
+                         "Values don't match:\n%s\n%s" % (
+                         repr(testing), repr(text)))
 
 
 if __name__ == '__main__':

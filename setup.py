@@ -9,7 +9,6 @@ setup(
     author='Ben Christenson',
     author_email='Python@BenChristenson.com',
     url='https://github.com/christensonb/SeabornTable',
-    download_url='https://github.com/christensonb/SeabornTable/archive/0.1.tar.gz',
     install_requires=[],
     extras_require={
         'test': ['test-chain'],
