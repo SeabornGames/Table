@@ -659,9 +659,8 @@ class SeabornTable(object):
         return [row[index] for row in self.table]
 
     def __contains__(self, value):
-        if not isinstance(value, (
-                tuple, list, dict, SeabornRow)) and self.key_on and len(
-            self.key_on) == 1:
+        if not isinstance(value, (tuple, list, dict, SeabornRow)) and \
+                self.key_on and len(self.key_on) == 1:
             value = [value]
 
         if isinstance(value, (tuple, list)) and self.key_on and len(
@@ -756,7 +755,7 @@ class SeabornTable(object):
             return ''
         if quote_numbers and isinstance(cell, basestring):
             if (cell.replace('.', '').isdigit() or
-                    '"' in cell or cell in ['False', 'True']):
+                        '"' in cell or cell in ['False', 'True']):
                 cell = '"%s"' % cell
 
         return str(cell)
@@ -963,9 +962,6 @@ class SeabornTable(object):
             cell = cell.replace(u'\u2019', "'").replace(u'\u2018', "'")
             cell = cell.replace(u'\u201c', '"').replace(u'\u201d', '"')
 
-        if isinstance(cell, unicode):
-            cell = cell.encode('ascii', errors="replace")
-
         if sys.version_info[0] == 3 and isinstance(cell, bytes):
             cell = cell.decode('utf-8')
 
@@ -978,6 +974,9 @@ class SeabornTable(object):
         ret = safe_str(cell).replace('\r', '\\r').replace('\n', '\r')
 
         if ret.startswith(' ') or ret.endswith(' '):
+            return '"' + ret.replace('"', '""') + '"'
+
+        if ret.startswith('='):
             return '"' + ret.replace('"', '""') + '"'
 
         for special_char in ['\r', '\t', '"', ',']:
@@ -1050,7 +1049,7 @@ class SeabornTable(object):
         if cell and cell[0] == '"' and cell[-1] == '"':
             cell = cell[1:-1]
         if quote_replacement:
-            cell = cell.replace('""','"')
+            cell = cell.replace('""', '"')
         if cell.replace('.', '').isdigit():
             while cell.startswith('0') and cell != '0':
                 cell = cell[1:]
