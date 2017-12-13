@@ -121,16 +121,14 @@ class ExampleTableTest(TestChain):
     def test_excel_csv(self):
         table = SeabornTable([['aaa', 'a_b_c', 'c'],
                               [1, '2\n2', '3'],
-                              ['4', '5', '6']])
+                              ['4', '5', '"Verdi: "Aida""']])
         file_path = os.path.join(PATH, 'test_excel_csv.csv')
-        text = table.obj_to_csv(space_columns=True)
-        with open(file_path, 'w') as f:
-            f.write(text)
+        table.obj_to_csv(space_columns=True, file_path=file_path)
         table2 = SeabornTable.csv_to_obj(file_path=file_path)
         table2.naming_convention_columns("underscore")
         log.debug('\nAnswer:\n%s\n\nResult:\n%s\n\n' % (
-            self.answer, str(table)))
-        self.assertEqual(str(table2), str(table),
+            str(table), str(table2)))
+        self.assertEqual(str(table), str(table2),
                          'Write then Read changed the data')
         os.remove(file_path)
 

@@ -1007,9 +1007,9 @@ class SeabornTable(object):
         text = text.replace('\xdf', 'B')
         text = text.replace('\xef\xbb\xbf', '')
         if text.find('\r\n') == -1:
-            lines = text.replace('""', '\xdf').split('\n')
+            lines = text.split('\n')
         else:
-            lines = text.replace('""', '\xdf').split('\r\n')
+            lines = text.split('\r\n')
 
         for i in range(len(lines)):
             lines[i] = lines[i].replace('\r', '\n')
@@ -1032,7 +1032,7 @@ class SeabornTable(object):
                     else:
                         cell += ',' + cells[i]
                     i += 1
-                cell = cls._eval_cell(cell, '\xdf')
+                cell = cls._eval_cell(cell, True)
 
                 row.append(cell)
             if not remove_empty_rows or True in [bool(r) for r in row]:
@@ -1043,13 +1043,12 @@ class SeabornTable(object):
         return ret
 
     @staticmethod
-    def _eval_cell(cell, quote_replacement=None):
+    def _eval_cell(cell, quote_replacement=False):
         cell = cell.strip()
         if cell and cell[0] == '"' and cell[-1] == '"':
             cell = cell[1:-1]
-
-        if quote_replacement is not None:
-            cell = cell.replace(quote_replacement, '"')
+        if quote_replacement:
+            cell = cell.replace('""','"')
         if cell.replace('.', '').isdigit():
             while cell.startswith('0') and cell != '0':
                 cell = cell[1:]
