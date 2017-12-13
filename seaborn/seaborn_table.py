@@ -11,11 +11,15 @@
 
     It can consume these from raw python data structures, csv, text, or mark down files.
     It can output to csv, text, or html.
+
+    This is primarily as a library but can be used as a script with:
+    > python seaborn_table.py source_file dest_file
 """
 import os
 import sys
 from collections import OrderedDict
 from functools import reduce
+
 
 if sys.version_info[0] == 2:
     class by_key(object):
@@ -716,10 +720,11 @@ class SeabornTable(object):
 
         return str(cell)
 
-    def obj_to_mark_down(self, title_columns=True):
+    def obj_to_mark_down(self, title_columns=True, file_path=None):
         """
         This will return a str of a mark down text
         :param title_columns: bool if True will title all headers
+        :param file_path: str of the path to the file to write to
         :return: str
         """
         md = [[self._title_column(cell) if title_columns else str(cell) for cell in self.columns]]
@@ -733,8 +738,11 @@ class SeabornTable(object):
         md.insert(1, [":" + '-' * (width - 1) for width in widths])
         md = ['| '.join([row[c].ljust(widths[c])
                          for c in range(len(row))]) for row in md]
-        string = '| ' + ' |\n| '.join(md) + ' |'
-        return '| ' + ' |\n| '.join(md) + ' |'
+        ret = '| ' + ' |\n| '.join(md) + ' |'
+        if file_path is not None:
+            with open(file_path, 'w') as fp:
+                fp.write(ret)
+        return ret
 
     @classmethod
     def objs_to_mark_down(cls, tables, keys=None, pretty_columns=True):
@@ -748,12 +756,17 @@ class SeabornTable(object):
         ret = ['#### ' + key + '\n' + tables[key].obj_to_mark_down(pretty_columns=pretty_columns) for key in keys]
         return '\n\n'.join(ret)
 
-    def obj_to_csv(self, quote_everything=False, space_columns=True):
+    def obj_to_str(self, file_path):
+        with open(file_path, 'w') as fp:
+            fp.write(str(self))
+
+    def obj_to_csv(self, quote_everything=False, space_columns=True, file_path=None):
         """
         This will return a str of a csv text that is friendly to excel
         :param quote_everything: bool if True will quote everything if it needs
             it or not
         :param space_columns: bool if True it will align columns with spaces
+        :param file_path: str to the path
         :return: str
         """
         csv = [[self.excel_cell(cell, quote_everything)
@@ -777,9 +790,14 @@ class SeabornTable(object):
             csv = [','.join(row) for row in csv]
 
         if os.name == 'posix':
-            return '\r\n'.join(csv)
+            ret = '\r\n'.join(csv)
         else:
-            return '\n'.join(csv)
+            ret = '\n'.join(csv)
+
+        if file_path is not None:
+            with open(file_path, 'w') as fp:
+                fp.write(ret)
+        return ret
 
     def html_link_cells(self):
         """
@@ -813,7 +831,8 @@ class SeabornTable(object):
             i = j if i != j else i + 1
 
     def obj_to_html(self, tab='', border=1, cell_padding=5, cell_spacing=1,
-                    border_color='black', align='center', row_span=None):
+                    border_color='black', align='center', row_span=None,
+                    file_path=None):
         """
         This will return a str of an html table.
         :param tab: str to insert before each line e.g. '    '
@@ -823,6 +842,7 @@ class SeabornTable(object):
         :param border_color: str of the color for the border
         :param align: str for cell alignment, center, left, right
         :param row_span: list of rows to span
+        :param file_path: str for path to the file
         :return: str of html code
         """
         html_table = self.html_link_cells()
@@ -841,8 +861,11 @@ class SeabornTable(object):
             </table>'''.strip().replace('\n            ', '\n')
 
         data = ('\n%s  ' % tab).join(data)
-        return (ret % (border, cell_padding, cell_spacing, border_color, data)
+        ret = (ret % (border, cell_padding, cell_spacing, border_color, data)
                 ).replace('\n', '\n%s' % tab)
+        if file_path is not None:
+            with open(file_path, 'w') as fp:
+                fp.write(ret)
 
     @staticmethod
     def html_cell(cell):
@@ -912,7 +935,7 @@ class SeabornTable(object):
         return ret
 
     @classmethod
-    def csv_to_obj(cls, file_path='', text='', columns=None,
+    def csv_to_obj(cls, file_path=None, text='', columns=None,
                    remove_empty_rows=True, key_on=None):
         """
         This will convert a csv file or csv text into a seaborn table and return it
@@ -923,7 +946,7 @@ class SeabornTable(object):
         :param key_on: list of str of columns to key on
         :return: SeabornTable
         """
-        if file_path and os.path.exists(file_path):
+        if file_path is not None and os.path.exists(file_path):
             with open(file_path, 'rb') as f:
                 text = f.read()
         if sys.version_info[0] == 3 and isinstance(text, bytes):
@@ -979,6 +1002,29 @@ class SeabornTable(object):
         return cell
 
     @classmethod
+    def file_to_obj(cls, file_path):
+        if file_path.endswith('.txt'):
+            return cls.str_to_obj(file_path = file_path)
+        elif file_path.endswith('.md'):
+            return cls.mark_down_to_obj(file_path = file_path)
+        elif file_path.endswith('.csv'):
+            return cls.csv_to_obj(file_path = file_path)
+        else:
+            raise 'Unknown file type: %s'%file_path
+
+    def obj_to_file(self, file_path):
+        if file_path.endswith('.txt'):
+            self.obj_to_str(file_path=file_path)
+        elif file_path.endswith('.csv'):
+            self.obj_to_csv(file_path=file_path)
+        elif file_path.endswith('html'):
+            self.obj_to_html(file_path=file_path)
+        elif file_path.endswith('md'):
+            self.obj_to_mark_down(file_path)
+        else:
+            raise 'Unknown file type: %s'%file_path
+
+    @classmethod
     def str_to_obj(cls, file_path = '', text = '', columns = None, remove_empty_rows = True, key_on = None,
                    row_columns=None, deliminator='\t', eval_cells=True):
         """
@@ -1011,7 +1057,7 @@ class SeabornTable(object):
         return cls(list_of_list, key_on=key_on, row_columns=row_columns, columns=columns)
 
     @classmethod
-    def mark_down_to_dict_of_obj(cls, file_path='', text='', columns=None, key_on=None, ignore_code_blocks=True):
+    def mark_down_to_dict_of_obj(cls, file_path=None, text='', columns=None, key_on=None, ignore_code_blocks=True):
         """
         This will read multiple tables separated by a #### Header and return it as a dictionary of headers
         :param file_path: str of the path to the file
@@ -1021,7 +1067,7 @@ class SeabornTable(object):
         :param ignore_code_blocks: bool if true will filter out any lines between ```
         :return: OrderedDict of {<header>: SeabornTable}
         """
-        if file_path and os.path.exists(file_path):
+        if file_path is not None and os.path.exists(file_path):
             with open(file_path, 'r') as f:
                 text = f.read()
 
@@ -1044,7 +1090,7 @@ class SeabornTable(object):
         return text
 
     @classmethod
-    def mark_down_to_obj(cls, file_path='', text='', columns=None, key_on=None, ignore_code_blocks=True):
+    def mark_down_to_obj(cls, file_path=None, text='', columns=None, key_on=None, ignore_code_blocks=True):
         """
         This will convert a csv file or csv text into a seaborn table and return it
         :param file_path: str of the path to the file
@@ -1054,7 +1100,7 @@ class SeabornTable(object):
         :param ignore_code_blocks: bool if true will filter out any lines between ```
         :return: SeabornTable
         """
-        if file_path and os.path.exists(file_path):
+        if file_path is not None and os.path.exists(file_path):
             with open(file_path, 'r') as fp:
                 text = fp.read()
         if sys.version_info[0] == 3 and isinstance(text, bytes):
@@ -1177,3 +1223,10 @@ def safe_str(obj, repr_line_break=False):
             return str(obj)
     except Exception as e:
         return obj.encode('utf-8')
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 3:
+        print(__doc__)
+    else:
+        SeabornTable.file_to_obj(sys.argv[1]).obj_to_file(sys.argv[2])
