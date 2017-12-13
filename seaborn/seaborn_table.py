@@ -750,17 +750,19 @@ class SeabornTable(object):
         return self._parameters
 
     @staticmethod
-    def safe_str(cell):  # todo reconcile this with excel version of safe_str
+    def safe_str(cell, quote_numbers=True):
+        # todo reconcile this with excel version of safe_str
         if cell is None:
             return ''
-        if isinstance(cell, basestring):
-            if cell.replace('.', '').isdigit() or '"' in cell or cell in [
-                'False', 'True']:
+        if quote_numbers and isinstance(cell, basestring):
+            if (cell.replace('.', '').isdigit() or
+                    '"' in cell or cell in ['False', 'True']):
                 cell = '"%s"' % cell
 
         return str(cell)
 
-    def obj_to_mark_down(self, title_columns=True, file_path=None):
+    def obj_to_mark_down(self, title_columns=True, file_path=None,
+                         quote_numbers=True):
         """
         This will return a str of a mark down text
         :param title_columns: bool if True will title all headers
@@ -770,8 +772,8 @@ class SeabornTable(object):
         md = [
             [self._title_column(cell) if title_columns else str(cell) for cell
              in self.columns]]
-        md += [[self.safe_str(row[col]) for col in self.columns] for row in
-               self.table]
+        md += [[self.safe_str(row[col], quote_numbers)
+                for col in self.columns] for row in self.table]
         widths = []
 
         for col in range(len(md[0])):
