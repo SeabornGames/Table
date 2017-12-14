@@ -976,7 +976,7 @@ class SeabornTable(object):
         if ret.startswith(' ') or ret.endswith(' '):
             return '"' + ret.replace('"', '""') + '"'
 
-        if ret.startswith('='):
+        if ret and ret[0] in '=+-*/':
             return '"' + ret.replace('"', '""') + '"'
 
         for special_char in ['\r', '\t', '"', ',']:
