@@ -203,7 +203,9 @@ class SeabornTable(object):
             table = [SeabornRow(row_columns, row) for row in list_]
 
         elif isinstance(list_[0], (list, tuple)):
-            row_columns = row_columns or columns or list_.pop(0)
+            row_columns = row_columns or columns or list_[0]
+            if list_[0] == row_columns:
+                list_ = list_[1:]
             table = [SeabornRow(row_columns, row) for row in list_]
 
         else:
@@ -1098,6 +1100,8 @@ class SeabornTable(object):
         if sys.version_info[0] == 3 and isinstance(text, bytes):
             text = text.decode('utf-8')
         text = text.strip().split('\n')
+        if len(text) == 1:
+            text = text[0].split('\r')
 
         eval_cell = cls._eval_cell if eval_cells else lambda x: x
         list_of_list = [[eval_cell(cell) for cell in row.split(deliminator)]
@@ -1225,7 +1229,7 @@ class SeabornRow(list):
                     if self._columns[i] == item:
                         # this fixes a special case that didn't work for index
                         return self[i]
-                assert KeyError, item
+                raise KeyError("Item: '%s' is not in %s"%(item, self.columns))
         except Exception as e:
             raise
 

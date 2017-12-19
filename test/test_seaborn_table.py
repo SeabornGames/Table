@@ -86,8 +86,17 @@ class ExampleTableTest(TestChain):
         log.debug(str(table))
         self.assertEqual(str(table), answer)
 
+    def test_key_error(self):
+        table = SeabornTable(self.list_of_list, deliminator=' | ')
+        try:
+            missing = table[0]['Missing']
+            raise AssertionError("Failed to throw KeyError")
+        except KeyError as ex:
+            return
+
     def test_list_of_list(self):
         table = SeabornTable(self.list_of_list, deliminator=' | ')
+        print(table)
         self.assertEqual(self.answer, str(table))
 
     def test_list_of_dict(self):
