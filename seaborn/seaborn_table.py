@@ -11,10 +11,10 @@
         dictionary of lists
 
     It can consume these from raw python data structures, csv, text,
-    or mark down files. It can output to csv, text, or html.
+    or mark down files. It can output to csv, text, markdown or html.
 
     This is primarily as a library but can be used as a script with:
-    > python seaborn_table.py source_file dest_file
+    > seaborn_table source_file dest_file
 """
 import os
 import sys
@@ -22,7 +22,8 @@ from collections import OrderedDict
 from functools import reduce
 
 if sys.version_info[0] == 2:
-    class by_key(object):
+
+    class ByKey(object):
         def __init__(self, keys, place_holder=None):
             self.keys = isinstance(keys, list) and keys or [keys]
 
@@ -43,7 +44,7 @@ else:
     unicode = str
 
 
-    class by_key(object):
+    class ByKey(object):
         def __init__(self, keys, comp=None):
             self.keys = isinstance(keys, list) and keys or [keys]
             self.comp = comp or (lambda x: x)
@@ -61,8 +62,8 @@ else:
 
 class SeabornTable(object):
     MAX_SIZE = 1000
-    DELIMINATOR = '\t'
-    TAB = ''
+    DEFAULT_DELIMINATOR = '\t'
+    DEFAULT_TAB = ''
 
     def __init__(self, table=None, columns=None, row_columns=None, tab=None,
                  key_on=None, deliminator=None):
@@ -74,6 +75,7 @@ class SeabornTable(object):
         :param key_on: tuple of str if assigned so table is accessed as dict
         :param deliminator: str to separate the columns such as , \t or |
         """
+        self._column_index = OrderedDict()
         if columns:
             columns = list(columns)
         if row_columns:
@@ -86,39 +88,57 @@ class SeabornTable(object):
         elif isinstance(table, SeabornTable):
             columns = columns or table._columns.copy()
             self.row_columns = table.row_columns
-            self.table = [SeabornRow(self.row_columns, list(row))
+            self.table = [SeabornRow(self._column_index, list(row).copy())
                           for row in table]
         elif isinstance(table, list) and isinstance(table[0], SeabornRow):
-            self.row_columns = table[0]._columns
+            # noinspection PyProtectedMember
+            self._column_index = table[0]._column_index
             self.table = table
         elif isinstance(table, dict):
             temp = SeabornTable.dict_to_obj(table, columns, row_columns,
                                             key_on=key_on)
-            self.row_columns, self.table = temp.row_columns, temp.table
+            self._column_index, self.table = temp._column_index, temp.table
         elif isinstance(table, list):
             temp = SeabornTable.list_to_obj(table, columns, row_columns,
                                             key_on=key_on)
-            self.row_columns, self.table = temp.row_columns, temp.table
+            self._column_index, self.table = temp._column_index, temp.table
         elif getattr(table, 'headings', None) is not None and \
-                        getattr(table, 'row_columns', None) is not None:
+                getattr(table, 'row_columns', None) is not None:
             self.row_columns = row_columns or columns or table.headings
-            self.table = [SeabornRow(self.row_columns,
+            self.table = [SeabornRow(self._column_index,
                                      [row[c] for c in self.row_columns])
                           for row in table]
         else:
             raise Exception("Unknown type of table")
 
         self._parameters = {}
-        self.tab = self.TAB if tab is None else tab
-        self.deliminator = self.DELIMINATOR if deliminator is None \
+        self.tab = self.DEFAULT_TAB if tab is None else tab
+        self.deliminator = self.DEFAULT_DELIMINATOR if deliminator is None \
             else deliminator
+        self._key_on = None
         self.key_on = key_on
         self._columns = columns or self.row_columns
 
         for column in self._columns:
-            if column not in self.row_columns:
+            if column not in self._column_index:
+                # noinspection PyTypeChecker
                 self.insert(None, column, None)
         self.assert_valid()
+
+    @property.getter
+    def row_column(self):
+        return self._column_index.keys()
+
+    @row_column.setter
+    def row_column(self, value):
+        self._column_index.clear()
+        for col, index in enumerate(value):
+            self._column_index[col] = index
+
+    @staticmethod
+    def _create_column_index(row_columns):
+        return OrderedDict(
+            [(col, index) for index, col in enumerate(row_columns)])
 
     def __add__(self, other):
         new_row_columns = self.row_columns + [c for c in other.row_columns
@@ -146,7 +166,7 @@ class SeabornTable(object):
 
         for row in list_:
             for key in row.keys():
-                if not key in ret:
+                if key not in ret:
                     ret.append(key)
                     if not isinstance(row, OrderedDict):
                         ret.sort()
@@ -160,7 +180,7 @@ class SeabornTable(object):
             or in alphabetical order
         """
         return isinstance(dict_, OrderedDict) and dict_.keys() or \
-               dict_ and sorted(dict_.keys()) or []
+            dict_ and sorted(dict_.keys()) or []
 
     def map(self, func):
         """
@@ -184,15 +204,17 @@ class SeabornTable(object):
         """
         if getattr(list_[0], 'keys', None) and not isinstance(list_[0], dict):
             row_columns = row_columns or columns or list_[0].keys()
+            column_index = cls._create_column_index(row_columns)
             table = [SeabornRow(
-                row_columns,
+                column_index,
                 [getattr(row, col, None) for col in row_columns])
-                for row in list_]
+                     for row in list_]
         elif isinstance(list_[0], dict):
             row_columns = row_columns or columns or \
                           cls.key_on_columns(key_on,
                                              cls.get_normalized_columns(list_))
-            table = [SeabornRow(row_columns,
+            column_index = cls._create_column_index(row_columns)
+            table = [SeabornRow(column_index,
                                 [row.get(c, None) for c in row_columns])
                      for row in list_]
 
@@ -200,17 +222,20 @@ class SeabornTable(object):
             row_columns = row_columns or columns or \
                           cls.key_on_columns(key_on, [
                               'Column %s' % i for i in range(len(list_[0]))])
-            table = [SeabornRow(row_columns, row) for row in list_]
+            column_index = cls._create_column_index(row_columns)
+            table = [SeabornRow(column_index, row) for row in list_]
 
         elif isinstance(list_[0], (list, tuple)):
             row_columns = row_columns or columns or list_[0]
             if list_[0] == row_columns:
                 list_ = list_[1:]
-            table = [SeabornRow(row_columns, row) for row in list_]
+            column_index = cls._create_column_index(row_columns)
+            table = [SeabornRow(column_index, row) for row in list_]
 
         else:
             row_columns = columns or []
-            table = [SeabornRow(row_columns, [row]) for row in list_]
+            column_index = cls._create_column_index(row_columns)
+            table = [SeabornRow(column_index, [row]) for row in list_]
 
         return cls(table, columns, row_columns, tab, key_on)
 
@@ -227,11 +252,12 @@ class SeabornTable(object):
         if isinstance(list(dict_.values())[0], dict):
             row_columns = row_columns or columns or cls.key_on_columns(
                 key_on, cls.ordered_keys(dict_.values()[0]))
+            column_index = cls._create_column_index(row_columns)
             if key_on is None:
-                table = [SeabornRow(row_columns, [row[c] for c in row_columns])
+                table = [SeabornRow(column_index, [row[c] for c in row_columns])
                          for row in dict_.values()]
             else:
-                table = [SeabornRow(row_columns,
+                table = [SeabornRow(column_index,
                                     [row.get(c, c == key_on and key or None)
                                      for c in row_columns])
                          for key, row in dict_.items()]
@@ -240,24 +266,26 @@ class SeabornTable(object):
                         list):  # todo this may need more work
             row_columns = row_columns or columns or \
                           cls.key_on_columns(key_on, sorted(dict_.keys()))
+            column_index = cls._create_column_index(row_columns)
             if key_on is None:
                 table = [
-                    SeabornRow(row_columns, [dict_[c][i] for c in columns])
+                    SeabornRow(column_index, [dict_[c][i] for c in columns])
                     for i in range(len(dict_[columns[0]]))]
             else:
                 table = [
-                    SeabornRow(row_columns, [dict_[c][i] for c in columns])
+                    SeabornRow(column_index, [dict_[c][i] for c in columns])
                     for i in range(len(dict_[columns[0]]))]
 
         else:
             row_columns = row_columns or columns or ['KEY', 'VALUE']
-            table = [SeabornRow(row_columns, [k, v]) for k, v in
+            column_index = cls._create_column_index(row_columns)
+            table = [SeabornRow(column_index, [k, v]) for k, v in
                      dict_.items()]
 
         return cls(table, columns, row_columns, tab, key_on)
 
-    @classmethod
-    def key_on_columns(self, key_on, columns):
+    @staticmethod
+    def key_on_columns(key_on, columns):
         """
         :param key_on: str of column
         :param columns: list of str of columns
@@ -270,8 +298,12 @@ class SeabornTable(object):
         return columns
 
     def assert_valid(self):
+        if set(self.row_columns) != self._column_index.keys():
+            raise Exception(
+                'Row columns "%s" does not match column_index "%s"' %
+                (self.row_columns, self._column_index))
         for c in self._columns:
-            if not c in self.row_columns:
+            if c not in self.row_columns:
                 raise Exception(
                     'Column "%s" is in columns but not in row_columns' % c)
             if not isinstance(c, (str, basestring, unicode)):
@@ -354,7 +386,7 @@ class SeabornTable(object):
             columns=self.columns, row_columns=self.row_columns, tab=self.tab,
             key_on=self.key_on)
         for row in self:
-            if not False in [row[k] == v for k, v in kwargs.items()]:
+            if False not in [row[k] == v for k, v in kwargs.items()]:
                 ret.append(row)
         return ret
 
@@ -432,7 +464,7 @@ class SeabornTable(object):
                        self.MAX_SIZE)
 
         for indexes in self.index_iterator(column_size, max_size):
-            row = SeabornRow(self.row_columns,
+            row = SeabornRow(self._column_index,
                              [self.pertibate_value(indexes.pop(0), c) for
                               c in self.columns])
 
@@ -502,10 +534,9 @@ class SeabornTable(object):
         try:
             return (d + d.join([str_(row[r]).ljust(width[i]) for i, r in
                                 enumerate(self._columns)]) + d).strip()
-        except:
+        except Exception as ex:
             return (d + d.join([str_(row[r]).ljust(width[r]) for r in
                                 range(len(width))]) + d).strip()
-            # todo fix this
 
     def column_width(self, index=None, name=None, max_width=300):
         """
@@ -515,7 +546,7 @@ class SeabornTable(object):
         :return: int of the width of this column
         """
         assert name is not None or index is not None
-        if name and not name in self.row_columns:
+        if name and name not in self.row_columns:
             return min(max_width, name)
 
         if index is not None:
@@ -556,17 +587,6 @@ class SeabornTable(object):
                 instead of row
         :return: None
         """
-        if index is None:
-            self.row_columns.append(column)
-            if self.row_columns is not self.columns and \
-                            column not in self.columns:
-                self.columns.append(column)
-        else:
-            self.row_columns.insert(index, column)
-            if self.row_columns is not self.columns and \
-                            column not in self.columns:
-                self.columns.insert(index, column)
-
         for row in self.table:
             value = values.pop(0) if values else default_value
             if compute_value_func is not None:
@@ -577,6 +597,16 @@ class SeabornTable(object):
                 row.append(value)
             else:
                 row.insert(index, value)
+
+        if index is None:
+            self.row_columns = self.row_columns + [column]
+            if self.row_columns is not self.columns and \
+                    column not in self.columns:
+                self.columns.append(column)
+        else:
+            self.row_columns = self.row_columns[:index] + [column] \
+                               + self.row_columns[index:]
+            self.columns.insert(index, column)
 
         self._parameters[column] = list(set(self.get_column(column)))
 
@@ -648,11 +678,11 @@ class SeabornTable(object):
             value = isinstance(value, list) and value or [value] * len(self)
 
         if item not in self.row_columns:
-            self.row_columns.append(item)
+            self.row_columns = self.row_columns + [item]
             for row in self.table:
                 row.append(None)
 
-        index = self.row_columns.index(item)
+        index = self._column_index[item]
         for i, row in enumerate(self.table):
             row[index] = value[i]
 
@@ -672,8 +702,8 @@ class SeabornTable(object):
                 if key == list(value):
                     return True
             return False
-        elif isinstance(value,
-                        SeabornRow) and value._columns == self.row_columns:
+        elif (isinstance(value, SeabornRow) and
+              value._column_index == self._column_index):
             return value in self.table
         elif isinstance(value, SeabornRow):  # todo better job
             value = [value[k] for k in self.row_columns]
@@ -744,7 +774,7 @@ class SeabornTable(object):
         else:
             values = (row + [None for i in range(len(row),
                                                  len(self.row_columns))])
-        return SeabornRow(self.row_columns, values)
+        return SeabornRow(self._column_index, values)
 
     @property
     def parameters(self):
@@ -757,7 +787,7 @@ class SeabornTable(object):
             return ''
         if quote_numbers and isinstance(cell, basestring):
             if (cell.replace('.', '').isdigit() or
-                        '"' in cell or cell in ['False', 'True']):
+                    '"' in cell or cell in ['False', 'True']):
                 cell = '"%s"' % cell
 
         return str(cell)
@@ -768,6 +798,7 @@ class SeabornTable(object):
         This will return a str of a mark down text
         :param title_columns: bool if True will title all headers
         :param file_path: str of the path to the file to write to
+        :param quote_numbers: bool if True will quote number
         :return: str
         """
         md = [
@@ -829,8 +860,8 @@ class SeabornTable(object):
             widths = []
 
             def len_(obj, max_width=300):
-                ret = [len(o) for o in safe_str(obj).split('\r')]
-                return min(max_width, max(ret))
+                width = [len(o) for o in safe_str(obj).split('\r')]
+                return min(max_width, max(width))
 
             for col in range(len(csv[0])):
                 widths.append(max([len_(row[col]) for row in csv]))
@@ -946,7 +977,8 @@ class SeabornTable(object):
         return '<tr %s>\n%s  %s\n%s</tr>' % (
             header, tab, ('\n%s  ' % tab).join(data), tab)
 
-    def excel_cell(self, cell, quote_everything=False):
+    @staticmethod
+    def excel_cell(cell, quote_everything=False):
         """
         This will return a text that excel interprets correctly when
         importing csv
@@ -1088,6 +1120,7 @@ class SeabornTable(object):
         :param file_path: str of the path to the file
         :param text: str of the csv text
         :param columns: list of str of columns to use
+        :param row_columns: list of str of columns in data but not to use
         :param remove_empty_rows: bool if True will remove empty rows
         :param key_on: list of str of columns to key on
         :param deliminator: str to use as a deliminator
@@ -1206,47 +1239,42 @@ class SeabornTable(object):
         keys = keys or self.key_on
         keys = keys if isinstance(keys, (list, tuple)) else [keys]
         if sys.version_info[0] == 2:
-            self.table.sort(by_key(keys))
+            self.table.sort(ByKey(keys))
         else:
-            self.table.sort(key=by_key(keys))
+            self.table.sort(key=ByKey(keys))
 
     def reverse(self):
         self.table.reverse()
 
 
 class SeabornRow(list):
-    def __init__(self, columns, values):
+    def __init__(self, column_index, values):
         super(SeabornRow, self).__init__(
-            values + [None] * (len(columns) - len(values)))
-        self._columns = columns
+            values + [None] * (len(column_index) - len(values)))
+        self._column_index = column_index
 
     def __getitem__(self, item):
         try:
             if isinstance(item, int):
                 return list.__getitem__(self, item)
             else:
-                for i in range(len(self._columns)):
-                    if self._columns[i] == item:
-                        # this fixes a special case that didn't work for index
-                        return self[i]
-                raise KeyError("Item: '%s' is not in %s"%(item, self.columns))
+                return list.__getitem__(self, self._column_index[item])
         except Exception as e:
             raise
 
     def __setitem__(self, item, value):
-
         if isinstance(item, int):
             return list.__setitem__(self, item, value)
-        elif item in self._columns:
-            return list.__setitem__(self, self._columns.index(item), value)
+        else:
+            return list.__setitem__(self, self._column_index[item], value)
 
     @property
     def columns(self):
-        return self._columns
+        return self._column_index.keys()
 
     def obj_to_dict(self):
-        return dict([(self._columns[i], list.__getitem__(self, i))
-                     for i in range(len(self))])
+        return {col: list.__getitem__(self, i)
+                for col, i in self._column_index.items()}
 
     def __repr__(self):
         return super(SeabornRow, self).__repr__()
@@ -1254,21 +1282,30 @@ class SeabornRow(list):
     def __str(self):
         return super(SeabornRow, self).__str__()
 
-    def get(self, key, default):
+    def get(self, key, default=None):
         try:
-            if key in self._columns:
-                return list.__getitem__(self, self._columns.index(key))
+            index = self._column_index.get(key, None)
+            key = index if index is not None else key
+            if isinstance(key, int) and key < len(self):
+                return list.__getitem__(self, key)
             else:
                 return default
         except Exception as e:
             raise
 
-    def update(self, dict):
-        for k, v in dict.items():
-            self[k] = v
+    def update(self, dict_):
+        """
+            This will update the row values if the columns exist
+        :param dict_: dict of values to update
+        :return: None
+        """
+        for key, value in dict_.items():
+            index = self._column_index.get(key, None)
+            if index is not None:
+                list.__setitem__(self, index, value)
 
     def copy(self):
-        return SeabornRow(self._columns, list(self) + [])
+        return SeabornRow(self._column_index, list(self).copy())
 
     def __nonzero__(self):
         for cell in self:
@@ -1290,7 +1327,9 @@ class HTMLRowRespan(object):
 
 
 def safe_str(obj, repr_line_break=False):
-    """ This is because non-ascii values can break normal str function """
+    """ This is because non-ascii values can break normal str function
+        :param obj: obj to turn in to a string
+        :param repr_line_break: if True will replace \n with \\n"""
     try:
         if repr_line_break:
             return str(obj).replace('\n', '\\n')
@@ -1301,7 +1340,7 @@ def safe_str(obj, repr_line_break=False):
 
 
 def main(source=None, destination=None):
-    if source == None and len(sys.argv) != 3:
+    if source is None and len(sys.argv) != 3:
         print(globals()['__doc__'])
         return
     source = sys.argv[1] if source is None else source
