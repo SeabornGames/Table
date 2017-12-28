@@ -2,13 +2,13 @@ from setuptools import setup
 
 setup(
     name='seaborn_table',
-    version='1.2.5',
+    version='1.3.0',
     description='SeabornTable reads and writes tables in '
                 'csv and md and acts like a list and dict."',
     long_description='',
     author='Ben Christenson',
     author_email='Python@BenChristenson.com',
-    url='https://github.com/christensonb/SeabornTable',
+    url='https://github.com/orgs/SeabornGames/SeabornTable',
     install_requires=[],
     extras_require={
         'test': ['test-chain'],

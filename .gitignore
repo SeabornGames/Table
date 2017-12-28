@@ -5,3 +5,6 @@
 build/*
 dist/*
 .pypirc
+venv/
+venv2/
+venv3/
