@@ -1283,8 +1283,11 @@ class ByKey(object):
     def __init__(self, keys, comp=None):
         self.keys = isinstance(keys, list) and keys or [keys]
         self.comp = comp or (lambda x: x)
-        if sys.version_info == 2:
-            setattr(self, '__call__', self.call2)
+        if sys.version_info[0] == 2:
+            self.call = self.call2
+
+    def __call__(self, *args):
+        return self.call(*args)
 
     def call2(self, obj1, obj2):
         for key in self.keys:
@@ -1299,7 +1302,7 @@ class ByKey(object):
                 return 0 - low_to_high
         return 0
 
-    def __call__(self, obj):
+    def call(self, obj):
         ret = []
         for key in self.keys:
             low_to_high = 1
