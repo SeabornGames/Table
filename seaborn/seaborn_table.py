@@ -23,9 +23,10 @@ from functools import reduce
 
 
 class SeabornTable(object):
-    DEFAULT_DELIMINATOR = '\t'
-    DEFAULT_TAB = ''
-
+    DEFAULT_DELIMINATOR = u'\t'
+    DEFAULT_TAB = u''
+    ENCODING = 'utf-8'
+    
     def __init__(self, table=None, columns=None, row_columns=None, tab=None,
                  key_on=None, deliminator=None):
         """
@@ -36,6 +37,8 @@ class SeabornTable(object):
         :param key_on: tuple of str if assigned so table is accessed as dict
         :param deliminator: str to separate the columns such as , \t or |
         """
+        self._deliminiator = self.DEFAULT_DELIMINATOR
+        self._tab = self.DEFAULT_TAB
         self._row_columns = []
         self._column_index = OrderedDict()
         if columns:
@@ -198,7 +201,7 @@ class SeabornTable(object):
             with open(file_path, 'rb') as f:
                 text = f.read()
         if sys.version_info[0] == 3 and isinstance(text, bytes):
-            text = text.decode('utf-8')
+            text = text.decode(SeabornTable.ENCODING)
         data = []
         # text = text.replace('\xdf', 'B')
         text = text.replace('\xef\xbb\xbf', '')
@@ -267,7 +270,7 @@ class SeabornTable(object):
             with open(file_path, 'rb') as f:
                 text = f.read()
         if sys.version_info[0] == 3 and isinstance(text, bytes):
-            text = text.decode('utf-8')
+            text = text.decode(SeabornTable.ENCODING)
         text = text.strip().split('\n')
         if len(text) == 1:
             text = text[0].split('\r')
@@ -300,7 +303,7 @@ class SeabornTable(object):
                 text = f.read()
 
         if sys.version_info[0] == 3 and isinstance(text, bytes):
-            text = text.decode('utf-8')
+            text = text.decode(SeabornTable.ENCODING)
         ret = OrderedDict()
         paragraphs = text.split('####')
         for paragraph in paragraphs[1:]:
@@ -328,7 +331,7 @@ class SeabornTable(object):
             with open(file_path, 'rb') as f:
                 text = f.read()
         if sys.version_info[0] == 3 and isinstance(text, bytes):
-            text = text.decode('utf-8')
+            text = text.decode(SeabornTable.ENCODING)
         text = text.replace('\r\n', '\n').replace('\r', '\n').strip()
 
         if ignore_code_blocks:
@@ -383,7 +386,7 @@ class SeabornTable(object):
                 for col in self.columns] for row in self.table]
 
         column_widths = self._get_column_widths(md, pad_last_column=True)
-        md.insert(1, [u":" + 'u-' * (width - 1) for width in column_widths])
+        md.insert(1, [u":" + u'-' * (width - 1) for width in column_widths])
         md = [u'| '.join([row[c].ljust(column_widths[c])
                          for c in range(len(row))]) for row in md]
         ret = u'| ' + u' |\n| '.join(md) + u' |'
@@ -391,10 +394,20 @@ class SeabornTable(object):
         return ret
 
     def obj_to_str(self, file_path=None, deliminator=None, tab=None):
-        self.deliminator = self.deliminator if deliminator is None \
+        deliminator = self.deliminator if deliminator is None \
             else deliminator
-        self.tab = self.tab if tab is None else tab
-        ret = str(self)
+        tab = self.tab if tab is None else tab
+
+        list_of_list = [[self._safe_str(cell, quote_numbers=False)
+                         for cell in row] for row in self]
+        list_of_list = [self.columns] + list_of_list
+
+        column_widths = self._get_column_widths(list_of_list, padding=0)
+        ret = [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
+               for row in list_of_list]
+
+        ret = [deliminator.join(row) for row in ret]
+        ret = tab + (u'\n'+tab).join(ret)
         self._save_file(file_path, ret)
         return ret
 
@@ -414,7 +427,7 @@ class SeabornTable(object):
                  for col in self.columns] for row in self.table]
 
         if space_columns:
-            column_widths = self._get_column_widths(csv)
+            column_widths = self._get_column_widths(csv, padding=0)
             csv = [','.join([cell.ljust(column_widths[i])
                              for i, cell in enumerate(row)]) for row in csv]
         else:
@@ -475,6 +488,26 @@ class SeabornTable(object):
             self.obj_to_mark_down(file_path=file_path, title_columns=False)
         else:
             raise 'Unknown file type: %s' % file_path
+
+    @property
+    def tab(self):
+        return self._tab
+
+    @tab.setter
+    def tab(self, value):
+        if sys.version_info[0] == 2:
+            value = value.decode(SeabornTable.ENCODING)
+        self._tab = value
+
+    @property
+    def deliminator(self):
+        return self._deliminator
+
+    @deliminator.setter
+    def deliminator(self, value):
+        if sys.version_info[0] == 2:
+            value = value.decode(SeabornTable.ENCODING)
+        self._deliminator = value
 
     @property
     def columns(self):
@@ -626,7 +659,7 @@ class SeabornTable(object):
     @classmethod
     def pertibate_to_obj(cls, columns, pertibate_values,
                          generated_columns=None, filter_func=None,
-                         max_size=None, deliminator=None):
+                         max_size=None, deliminator=None, tab=None):
         """
             This will create and add rows to the table by pertibating the
             parameters for the provided columns
@@ -636,9 +669,10 @@ class SeabornTable(object):
         :param filter_func: func to return False to filter out row
         :param max_size: int of the max size of the table
         :param deliminator: str to use as a deliminator when making a str
+        :param tab: str to include before every row
         :return: SeabornTable
         """
-        table = cls(columns=columns, deliminator=deliminator)
+        table = cls(columns=columns, deliminator=deliminator, tab=tab)
         table._parameters = pertibate_values.copy()
         table._parameters.update(generated_columns or {})
         table.pertibate(pertibate_values.keys(), filter_func, max_size)
@@ -680,18 +714,13 @@ class SeabornTable(object):
                 self.set_column(c, self._parameters[c])
 
     def __str__(self):
-        """
-        :return: str of the table
-        """
-        list_of_list = [self.columns] + [
-            [self._safe_str(cell for cell in row)] for row in self]
+        ret = self.obj_to_str()
+        if sys.version_info[0] == 2:
+            ret = ret.encode(self.ENCODING)
+        return ret
 
-        column_widths = self._get_column_widths(list_of_list)
-        ret = [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
-               for row in list_of_list]
-
-        ret = [self.deliminator.join(row) for row in ret]
-        return self.tab + ('\n'+self.tab).join(ret)
+    def __unicode__(self):
+        return self.obj_to_str()
 
     def __repr__(self):
         return '%s<rows=%s, cols=%s>'%(
@@ -907,14 +936,16 @@ class SeabornTable(object):
 
     @staticmethod
     def _safe_str(cell, quote_numbers=True, repr_line_break=False):
-        """ This is because non-ascii values can break normal str function
+        """
         :param cell: obj to turn in to a string
         :param quote_numbers: if True numbers will be quoted
         :param repr_line_break: if True will replace \n with \\n"""
         if cell is None:
             return ''
 
-        ret = str(cell).decode('utf-8')
+        ret = str(cell)
+        if sys.version_info[0] == 2:
+            ret = ret.decode(SeabornTable.ENCODING)
         if quote_numbers and isinstance(cell, basestring):
             if (ret.replace('.', '').isdigit() or
                     u'"' in ret or ret in [u'False', u'True']):
@@ -942,7 +973,7 @@ class SeabornTable(object):
 
         ret = str(cell)
         if sys.version_info[0] == 2:
-            ret = ret.decode('utf-8')
+            ret = ret.decode(SeabornTable.ENCODING)
         if isinstance(cell, (int, float)) and not quote_everything:
             return ret
 
@@ -1078,7 +1109,7 @@ class SeabornTable(object):
         if file_path is None:
             return
         if isinstance(text, unicode):
-            text = text.encode('utf-8')
+            text = text.encode(SeabornTable.ENCODING)
         with open(file_path, 'wb') as fp:
             fp.write(text)
 
