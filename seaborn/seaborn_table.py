@@ -36,6 +36,7 @@ class SeabornTable(object):
         :param key_on: tuple of str if assigned so table is accessed as dict
         :param deliminator: str to separate the columns such as , \t or |
         """
+        self._row_columns = []
         self._column_index = OrderedDict()
         if columns:
             columns = list(columns)
@@ -53,15 +54,18 @@ class SeabornTable(object):
                           for row in table]
         elif isinstance(table, list) and isinstance(table[0], SeabornRow):
             self._column_index = table[0].column_index
+            self._row_columns = list(table[0].column_index.keys())
             self.table = table
         elif isinstance(table, dict):
             temp = SeabornTable.dict_to_obj(table, columns, row_columns,
                                             key_on=key_on)
             self._column_index, self.table = temp._column_index, temp.table
+            self._row_columns = list(self._column_index.keys())
         elif isinstance(table, list):
             temp = SeabornTable.list_to_obj(table, columns, row_columns,
                                             key_on=key_on)
             self._column_index, self.table = temp._column_index, temp.table
+            self._row_columns = list(self._column_index.keys())
         elif getattr(table, 'headings', None) is not None and \
                 getattr(table, 'row_columns', None) is not None:
             self.row_columns = row_columns or columns or table.headings
@@ -86,7 +90,7 @@ class SeabornTable(object):
         self.assert_valid()
 
     @classmethod
-    def list_to_obj(cls, list_, columns, row_columns, tab='', key_on=None):
+    def list_to_obj(cls, list_, columns, row_columns=None, tab='', key_on=None):
         """
         :param list_: list of list or list of dictionary to use as the source
         :param columns: list of strings to label the columns on print out
@@ -191,12 +195,12 @@ class SeabornTable(object):
         :return: SeabornTable
         """
         if file_path is not None and os.path.exists(file_path):
-            with open(file_path, 'r') as f:
+            with open(file_path, 'rb') as f:
                 text = f.read()
         if sys.version_info[0] == 3 and isinstance(text, bytes):
             text = text.decode('utf-8')
         data = []
-        text = text.replace('\xdf', 'B')
+        # text = text.replace('\xdf', 'B')
         text = text.replace('\xef\xbb\xbf', '')
         if text.find('\r\n') == -1:
             lines = text.split('\n')
@@ -213,8 +217,7 @@ class SeabornTable(object):
             i = 0
             row = []
             while i < len(cells):
-                cell = cells[
-                    i]  # for some reason this is slow in pycharm debug
+                cell = cells[i]  # this is slow in pycharm debug
                 i += 1
                 while cell.count('"') % 2:
                     if i >= len(cells):  # excel causes this to happen
@@ -230,9 +233,7 @@ class SeabornTable(object):
             if not remove_empty_rows or True in [bool(r) for r in row]:
                 data.append(row)
 
-        ret = cls(data[1:], key_on=key_on, row_columns=data[0],
-                  columns=columns)
-        return ret
+        return cls.list_to_obj(data, columns=columns, key_on=key_on)
 
     @classmethod
     def file_to_obj(cls, file_path, columns=None):
@@ -263,7 +264,7 @@ class SeabornTable(object):
         :return: SeabornTable
         """
         if file_path and os.path.exists(file_path):
-            with open(file_path, 'r') as f:
+            with open(file_path, 'rb') as f:
                 text = f.read()
         if sys.version_info[0] == 3 and isinstance(text, bytes):
             text = text.decode('utf-8')
@@ -280,10 +281,7 @@ class SeabornTable(object):
         if list_of_list[0][0] == '' and list_of_list[0][-1] == '':
             list_of_list = [row[1:-1] for row in list_of_list]
 
-        if row_columns is None:
-            row_columns = list_of_list.pop(0)
-        return cls(list_of_list, key_on=key_on, row_columns=row_columns,
-                   columns=columns)
+        return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns)
 
     @classmethod
     def mark_down_to_dict_of_obj(cls, file_path=None, text='', columns=None,
@@ -298,7 +296,7 @@ class SeabornTable(object):
         :return: OrderedDict of {<header>: SeabornTable}
         """
         if file_path is not None and os.path.exists(file_path):
-            with open(file_path, 'r') as f:
+            with open(file_path, 'rb') as f:
                 text = f.read()
 
         if sys.version_info[0] == 3 and isinstance(text, bytes):
@@ -327,8 +325,8 @@ class SeabornTable(object):
         :return: SeabornTable
         """
         if file_path is not None and os.path.exists(file_path):
-            with open(file_path, 'r') as fp:
-                text = fp.read()
+            with open(file_path, 'rb') as f:
+                text = f.read()
         if sys.version_info[0] == 3 and isinstance(text, bytes):
             text = text.decode('utf-8')
         text = text.replace('\r\n', '\n').replace('\r', '\n').strip()
@@ -390,16 +388,16 @@ class SeabornTable(object):
                          for c in range(len(row))]) for row in md]
         ret = '| ' + ' |\n| '.join(md) + ' |'
         if file_path is not None:
-            with open(file_path, 'w') as fp:
-                fp.write(ret)
+            with open(file_path, 'wb') as fp:
+                fp.write(ret.encode('utf-8'))
         return ret
 
     def obj_to_str(self, file_path, deliminator=None, tab=None):
         self.deliminator = self.deliminator if deliminator is None \
             else deliminator
         self.tab = self.tab if tab is None else tab
-        with open(file_path, 'w') as fp:
-            fp.write(str(self))
+        with open(file_path, 'wb') as fp:
+            fp.write(str(self).encode('utf-8'))
 
     def obj_to_csv(self, quote_everything=False, space_columns=True,
                    file_path=None):
@@ -438,8 +436,8 @@ class SeabornTable(object):
             ret = '\n'.join(csv)
 
         if file_path is not None:
-            with open(file_path, 'w') as fp:
-                fp.write(ret)
+            with open(file_path, 'wb') as fp:
+                fp.write(ret.encode('utf-8'))
         return ret
 
     def obj_to_html(self, tab='', border=1, cell_padding=5, cell_spacing=1,
@@ -476,8 +474,8 @@ class SeabornTable(object):
         ret = (ret % (border, cell_padding, cell_spacing, border_color, data)
                ).replace('\n', '\n%s' % tab)
         if file_path is not None:
-            with open(file_path, 'w') as fp:
-                fp.write(ret)
+            with open(file_path, 'wb') as fp:
+                fp.write(ret.encode('utf-8'))
         return ret
 
     def obj_to_file(self, file_path):
@@ -508,12 +506,13 @@ class SeabornTable(object):
 
     @property
     def row_columns(self):
-        return self._column_index.keys()
+        return self._row_columns
 
     @row_columns.setter
     def row_columns(self, value):
+        self._row_columns = list(value)
         self._column_index.clear()
-        for col, index in enumerate(value):
+        for index, col in enumerate(value):
             self._column_index[col] = index
 
     @property
@@ -579,7 +578,7 @@ class SeabornTable(object):
             'Convention "%s" is not a valid convention' % convention
         self.row_columns = [converter(col) for col in self.row_columns]
         self._columns = [converter(col) for col in self._columns]
-        if remove_empty:
+        if remove_empty and '' in self.row_columns:
             self.remove_column('')
 
     def remove_column(self, key):
@@ -677,7 +676,7 @@ class SeabornTable(object):
         column_size = [c in pertibate_columns and len(self._parameters[c]) or 1
                        for c in self.columns]
 
-        max_size = min(max_size or reduce(lambda x, y: x * y, column_size))
+        max_size = min(max_size, reduce(lambda x, y: x * y, column_size))
 
         for indexes in self._index_iterator(column_size, max_size):
             row = SeabornRow(self._column_index,
@@ -838,7 +837,8 @@ class SeabornTable(object):
         self.table = []
 
     def copy(self):
-        return self.__class__(self)
+        return self.__class__(self.table, self.columns, self.row_columns,
+                              self.tab, self.key_on, self.deliminator)
 
     def set_column(self, item, value=None):
         if hasattr(value, '__call__'):
@@ -957,21 +957,19 @@ class SeabornTable(object):
         if sys.version_info[0] == 3 and isinstance(cell, bytes):
             cell = cell.decode('utf-8')
 
-        if quote_everything:
-            return '"' + SeabornTable._safe_str(cell, quote_numbers=False) + '"'
+        if isinstance(cell, (int, float)) and not quote_everything:
+            return str(cell)
 
-        if isinstance(cell, str) and cell.replace('.', '').isdigit():
-            return '"' + cell + '"'
+        ret = str(cell).replace('"','""')
+        ret = ret.replace('\r', '\\r').replace('\n', '\r')
 
-        ret = SeabornTable._safe_str(cell) \
-            .replace('\r', '\\r').replace('\n', '\r')
-
-        if ret.startswith(' ') or ret.endswith(' '):
-            return '"' + ret.replace('"', '""') + '"'
+        if (ret.replace('.', '').isdigit() or
+                ret.startswith(' ') or ret.endswith(' ')):
+            return '"%s"'%ret
 
         for special_char in ['\r', '\t', '"', ',', "'"]:
             if special_char in ret:
-                return '"' + ret.replace('"', '""') + '"'
+                return '"' + ret + '"'
 
         return ret
 
