@@ -14,7 +14,7 @@
     or mark down files. It can output to csv, text, markdown or html.
 
     This is primarily as a library but can be used as a script with:
-    > seaborn_table source_file dest_file
+    > seaborn_table source_file destination_file
 """
 import os
 import sys
@@ -26,7 +26,7 @@ class SeabornTable(object):
     DEFAULT_DELIMINATOR = u'\t'
     DEFAULT_TAB = u''
     ENCODING = 'utf-8'
-    
+
     def __init__(self, table=None, columns=None, row_columns=None, tab=None,
                  key_on=None, deliminator=None):
         """
@@ -37,7 +37,7 @@ class SeabornTable(object):
         :param key_on: tuple of str if assigned so table is accessed as dict
         :param deliminator: str to separate the columns such as , \t or |
         """
-        self._deliminiator = self.DEFAULT_DELIMINATOR
+        self._deliminator = self.DEFAULT_DELIMINATOR
         self._tab = self.DEFAULT_TAB
         self._row_columns = []
         self._column_index = OrderedDict()
@@ -51,7 +51,7 @@ class SeabornTable(object):
             self.row_columns = columns or row_columns or []
             self.table = []
         elif isinstance(table, SeabornTable):
-            columns = columns or table._columns.copy()
+            columns = columns or table.columns.copy()
             self.row_columns = table.row_columns
             self.table = [SeabornRow(self._column_index, list(row) + [])
                           for row in table]
@@ -93,7 +93,8 @@ class SeabornTable(object):
         self.assert_valid()
 
     @classmethod
-    def list_to_obj(cls, list_, columns, row_columns=None, tab='', key_on=None):
+    def list_to_obj(cls, list_, columns, row_columns=None, tab='',
+                    key_on=None):
         """
         :param list_: list of list or list of dictionary to use as the source
         :param columns: list of strings to label the columns on print out
@@ -108,7 +109,7 @@ class SeabornTable(object):
             table = [SeabornRow(
                 column_index,
                 [getattr(row, col, None) for col in row_columns])
-                     for row in list_]
+                for row in list_]
         elif isinstance(list_[0], dict):
             row_columns = row_columns or columns or \
                           cls._key_on_columns(key_on,
@@ -154,8 +155,9 @@ class SeabornTable(object):
                 key_on, cls._ordered_keys(dict_.values()[0]))
             column_index = cls._create_column_index(row_columns)
             if key_on is None:
-                table = [SeabornRow(column_index, [row[c] for c in row_columns])
-                         for row in dict_.values()]
+                table = [
+                    SeabornRow(column_index, [row[c] for c in row_columns])
+                    for row in dict_.values()]
             else:
                 table = [SeabornRow(column_index,
                                     [row.get(c, c == key_on and key or None)
@@ -213,10 +215,10 @@ class SeabornTable(object):
         for i in range(len(lines)):
             lines[i] = lines[i].replace('\r', '\n')
             lines[i] = lines[i].replace('\\r', '\r').split(',')
-        l = 0
-        while l < len(lines):
-            cells = lines[l]
-            l += 1
+        line_index = 0
+        while line_index < len(lines):
+            cells = lines[line_index]
+            line_index += 1
             i = 0
             row = []
             while i < len(cells):
@@ -224,9 +226,9 @@ class SeabornTable(object):
                 i += 1
                 while cell.count('"') % 2:
                     if i >= len(cells):  # excel causes this to happen
-                        cells += lines[l]
+                        cells += lines[line_index]
                         cell += "\n" + cells[i]  # add the line break back in
-                        l += 1
+                        line_index += 1
                     else:
                         cell += ',' + cells[i]
                     i += 1
@@ -284,7 +286,8 @@ class SeabornTable(object):
         if list_of_list[0][0] == '' and list_of_list[0][-1] == '':
             list_of_list = [row[1:-1] for row in list_of_list]
 
-        return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns)
+        return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns,
+                               row_columns=row_columns)
 
     @classmethod
     def mark_down_to_dict_of_obj(cls, file_path=None, text='', columns=None,
@@ -388,7 +391,7 @@ class SeabornTable(object):
         column_widths = self._get_column_widths(md, pad_last_column=True)
         md.insert(1, [u":" + u'-' * (width - 1) for width in column_widths])
         md = [u'| '.join([row[c].ljust(column_widths[c])
-                         for c in range(len(row))]) for row in md]
+                          for c in range(len(row))]) for row in md]
         ret = u'| ' + u' |\n| '.join(md) + u' |'
         self._save_file(file_path, ret)
         return ret
@@ -407,7 +410,7 @@ class SeabornTable(object):
                for row in list_of_list]
 
         ret = [deliminator.join(row) for row in ret]
-        ret = tab + (u'\n'+tab).join(ret)
+        ret = tab + (u'\n' + tab).join(ret)
         self._save_file(file_path, ret)
         return ret
 
@@ -544,7 +547,7 @@ class SeabornTable(object):
         :param value: str of which column to key the rows on like a dictionary
         :return: None
         """
-        if isinstance(value, basestring):
+        if isinstance(value, BASESTRING):
             value = (value,)
         self._key_on = value
 
@@ -567,7 +570,7 @@ class SeabornTable(object):
             if c not in self.row_columns:
                 raise Exception(
                     'Column "%s" is in columns but not in row_columns' % c)
-            if not isinstance(c, basestring):
+            if not isinstance(c, BASESTRING):
                 raise Exception(
                     'Column "%s" is "%s" and not a string' % (c, type(c)))
 
@@ -723,7 +726,7 @@ class SeabornTable(object):
         return self.obj_to_str()
 
     def __repr__(self):
-        return '%s<rows=%s, cols=%s>'%(
+        return '%s<rows=%s, cols=%s>' % (
             self.__class__.__name__, len(self), len(self.columns))
 
     def __add__(self, other):
@@ -935,6 +938,24 @@ class SeabornTable(object):
         self.table.reverse()
 
     @staticmethod
+    def _get_column_widths(list_of_list, min_width=2, max_width=300,
+                           padding=1, pad_last_column=False):
+        def _len(text):
+            if len(text) > 15:
+                pass
+            if u'\n' in text:
+                return len(text.split(u'\n', 1)[0])
+            return len(text)
+
+        widths = []
+        for col in range(len(list_of_list[0])):
+            width = max([_len(row[col]) + padding for row in list_of_list])
+            widths.append(max(min_width, min(max_width, width)))
+        if not pad_last_column and widths:
+            widths[-1] = 0
+        return widths
+
+    @staticmethod
     def _safe_str(cell, quote_numbers=True, repr_line_break=False):
         """
         :param cell: obj to turn in to a string
@@ -946,13 +967,13 @@ class SeabornTable(object):
         ret = str(cell)
         if sys.version_info[0] == 2:
             ret = ret.decode(SeabornTable.ENCODING)
-        if quote_numbers and isinstance(cell, basestring):
+        if quote_numbers and isinstance(cell, BASESTRING):
             if (ret.replace('.', '').isdigit() or
                     u'"' in ret or ret in [u'False', u'True']):
                 ret = u'"%s"' % ret
 
         if repr_line_break:
-            ret =  ret.replace(u'\n', u'\\n')
+            ret = ret.replace(u'\n', u'\\n')
         return ret
 
     @staticmethod
@@ -981,15 +1002,15 @@ class SeabornTable(object):
         ret = ret.replace(u'\u201c', u'"').replace(u'\u201d', u'"')
         ret = ret.replace(u'\r', u'\\r')
         ret = ret.replace(u'\n', u'\r')
-        ret = ret.replace(u'"',u'""')
+        ret = ret.replace(u'"', u'""')
 
         if (ret.replace(u'.', u'').isdigit() or
                 ret.startswith(u' ') or ret.endswith(u' ')):
-            return u'"%s"'%ret
+            return u'"%s"' % ret
 
         for special_char in [u'\r', u'\t', u'"', u',', u"'"]:
             if special_char in ret:
-                return u'"%s"'%ret
+                return u'"%s"' % ret
 
         return ret
 
@@ -1108,7 +1129,7 @@ class SeabornTable(object):
     def _save_file(file_path, text):
         if file_path is None:
             return
-        if isinstance(text, unicode):
+        if isinstance(text, UNICODE):
             text = text.encode(SeabornTable.ENCODING)
         with open(file_path, 'wb') as fp:
             fp.write(text)
@@ -1176,23 +1197,6 @@ class SeabornTable(object):
         if isinstance(value, list):
             return value[index]
         return value
-
-    def _get_column_widths(self, list_of_list, min_width=2, max_width=300,
-                           padding=1, pad_last_column=False):
-        def _len(text):
-            if len(text) > 15:
-                pass
-            if u'\n' in text:
-                return len(text.split(u'\n', 1)[0])
-            return len(text)
-
-        widths = []
-        for col in range(len(list_of_list[0])):
-            width = max([_len(row[col]) + padding for row in list_of_list])
-            widths.append(max(min_width, min(max_width, width)))
-        if not pad_last_column and widths:
-            widths[-1] = 0
-        return widths
 
     def _column_width(self, index=None, name=None, max_width=300, **kwargs):
         """
@@ -1287,6 +1291,9 @@ class SeabornRow(list):
     def copy(self):
         return SeabornRow(self.column_index, list(self) + [])
 
+    def append(self, value):
+        list.append(self, value)
+
     def __nonzero__(self):
         for cell in self:
             if cell:
@@ -1339,9 +1346,9 @@ class ByKey(object):
             ret.append(self.comp(obj[key]) * low_to_high)
         return ret
 
-if sys.version_info[0] == 3:
-    basestring = str
-    unicode = str
+
+BASESTRING = basestring if sys.version_info[0] == 2 else str
+UNICODE = unicode if sys.version_info[0] == 2 else str
 
 
 def main(source=None, destination=None):
