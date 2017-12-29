@@ -382,11 +382,11 @@ class SeabornTable(object):
         md += [[self._safe_str(row[col], quote_numbers)
                 for col in self.columns] for row in self.table]
 
-        widths = self._get_column_widths(md)
-        md.insert(1, [":" + '-' * (width - 1) for width in widths])
-        md = ['| '.join([row[c].ljust(widths[c])
+        column_widths = self._get_column_widths(md, pad_last_column=True)
+        md.insert(1, [u":" + 'u-' * (width - 1) for width in column_widths])
+        md = [u'| '.join([row[c].ljust(column_widths[c])
                          for c in range(len(row))]) for row in md]
-        ret = '| ' + ' |\n| '.join(md) + ' |'
+        ret = u'| ' + u' |\n| '.join(md) + u' |'
         self._save_file(file_path, ret)
         return ret
 
@@ -414,18 +414,9 @@ class SeabornTable(object):
                  for col in self.columns] for row in self.table]
 
         if space_columns:
-            widths = []
-
-            def len_(obj, max_width=300):
-                width = [len(o) for o in self._safe_str(obj).split('\r')]
-                return min(max_width, max(width))
-
-            for col in range(len(csv[0])):
-                widths.append(max([len_(row[col]) for row in csv]))
-            widths[-1] = 0
-
-            csv = [','.join([row[c].ljust(widths[c])
-                             for c in range(len(row))]) for row in csv]
+            column_widths = self._get_column_widths(csv)
+            csv = [','.join([cell.ljust(column_widths[i])
+                             for i, cell in enumerate(row)]) for row in csv]
         else:
             csv = [','.join(row) for row in csv]
 
@@ -692,16 +683,19 @@ class SeabornTable(object):
         """
         :return: str of the table
         """
-        list_of_list = [self.columns] + +table [row[]
-        column_widths = self._get_column_widths()
+        list_of_list = [self.columns] + [
+            [self._safe_str(cell for cell in row)] for row in self]
 
-            [self._column_width(
-            name=col, quote_numbers=False, repr_line_break=True)
-                         for col in self.columns]
-        ret = [self._row_to_str(
-            row, column_widths, quote_numbers = False, repr_line_break=True)
-               for row in ([self.columns] + self.table)]
-        return self.tab + ('\n' + self.tab).join(ret)
+        column_widths = self._get_column_widths(list_of_list)
+        ret = [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
+               for row in list_of_list]
+
+        ret = [self.deliminator.join(row) for row in ret]
+        return self.tab + ('\n'+self.tab).join(ret)
+
+    def __repr__(self):
+        return '%s<rows=%s, cols=%s>'%(
+            self.__class__.__name__, len(self), len(self.columns))
 
     def __add__(self, other):
         column_index = self._create_column_index(
@@ -917,21 +911,18 @@ class SeabornTable(object):
         :param cell: obj to turn in to a string
         :param quote_numbers: if True numbers will be quoted
         :param repr_line_break: if True will replace \n with \\n"""
-        if sys.version_info[0] == 3 and isinstance(cell, bytes):
-            cell = cell.decode('utf-8')
-
         if cell is None:
             return ''
 
+        ret = str(cell).decode('utf-8')
         if quote_numbers and isinstance(cell, basestring):
-            if (cell.replace('.', '').isdigit() or
-                    '"' in cell or cell in ['False', 'True']):
-                cell = '"%s"' % cell
+            if (ret.replace('.', '').isdigit() or
+                    u'"' in ret or ret in [u'False', u'True']):
+                ret = u'"%s"' % ret
 
         if repr_line_break:
-            return str(cell).replace('\n', '\\n')
-        else:
-            return str(cell)
+            ret =  ret.replace(u'\n', u'\\n')
+        return ret
 
     @staticmethod
     def _excel_cell(cell, quote_everything=False):
@@ -943,31 +934,31 @@ class SeabornTable(object):
         :return: str
         """
         if cell is None:
-            return ''
+            return u''
         if cell is True:
-            return 'TRUE'
+            return u'TRUE'
         if cell is False:
-            return 'FALSE'
-        if isinstance(cell, unicode):
-            cell = cell.replace(u'\u2019', "'").replace(u'\u2018', "'")
-            cell = cell.replace(u'\u201c', '"').replace(u'\u201d', '"')
+            return u'FALSE'
 
-        if sys.version_info[0] == 3 and isinstance(cell, bytes):
-            cell = cell.decode('utf-8')
-
+        ret = str(cell)
+        if sys.version_info[0] == 2:
+            ret = ret.decode('utf-8')
         if isinstance(cell, (int, float)) and not quote_everything:
-            return str(cell)
+            return ret
 
-        ret = str(cell).replace('"','""')
-        ret = ret.replace('\r', '\\r').replace('\n', '\r')
+        ret = ret.replace(u'\u2019', u"'").replace(u'\u2018', u"'")
+        ret = ret.replace(u'\u201c', u'"').replace(u'\u201d', u'"')
+        ret = ret.replace(u'\r', u'\\r')
+        ret = ret.replace(u'\n', u'\r')
+        ret = ret.replace(u'"',u'""')
 
-        if (ret.replace('.', '').isdigit() or
-                ret.startswith(' ') or ret.endswith(' ')):
-            return '"%s"'%ret
+        if (ret.replace(u'.', u'').isdigit() or
+                ret.startswith(u' ') or ret.endswith(u' ')):
+            return u'"%s"'%ret
 
-        for special_char in ['\r', '\t', '"', ',', "'"]:
+        for special_char in [u'\r', u'\t', u'"', u',', u"'"]:
             if special_char in ret:
-                return '"' + ret + '"'
+                return u'"%s"'%ret
 
         return ret
 
@@ -1148,25 +1139,6 @@ class SeabornTable(object):
         return '<tr %s>\n%s  %s\n%s</tr>' % (
             header, tab, ('\n%s  ' % tab).join(data), tab)
 
-    def _row_to_str(self, row, width, **kwargs):
-        """
-            This will return a list as a text in the form of a behave table
-        :param row: list of values
-        :param width: list of int of the column width
-        :return: str of the row in the behave table format | col 1 | col 2 |
-        """
-        d = self.deliminator
-
-        def str_(obj):
-            return '' if obj is None else self._safe_str(obj, **kwargs)
-
-        if isinstance(row, SeabornRow):
-            return (d + d.join([str_(row[r]).ljust(width[i]) for i, r in
-                                enumerate(self._columns)]) + d).strip()
-        else:
-            return (d + d.join([str_(row[r]).ljust(width[r]) for r in
-                                range(len(width))]) + d).strip()
-
     def _pertibate_value(self, index, column):
         # noinspection PyTypeChecker
         value = self._parameters.get(column, '')
@@ -1175,11 +1147,20 @@ class SeabornTable(object):
         return value
 
     def _get_column_widths(self, list_of_list, min_width=2, max_width=300,
-                           padding=1):
+                           padding=1, pad_last_column=False):
+        def _len(text):
+            if len(text) > 15:
+                pass
+            if u'\n' in text:
+                return len(text.split(u'\n', 1)[0])
+            return len(text)
+
         widths = []
         for col in range(len(list_of_list[0])):
-            width = max([len(row[col]) + padding for row in list_of_list])
+            width = max([_len(row[col]) + padding for row in list_of_list])
             widths.append(max(min_width, min(max_width, width)))
+        if not pad_last_column and widths:
+            widths[-1] = 0
         return widths
 
     def _column_width(self, index=None, name=None, max_width=300, **kwargs):
