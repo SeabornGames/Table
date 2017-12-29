@@ -352,9 +352,11 @@ class SeabornTable(object):
         return cls(table=table[2:], columns=columns or table[0], key_on=key_on)
 
     @classmethod
-    def objs_to_mark_down(cls, tables, keys=None, pretty_columns=True):
+    def objs_to_mark_down(cls, tables, file_path=None, keys=None,
+                          pretty_columns=True):
         """
         :param tables:         dict of {str <name>:SeabornTable}
+        :param file_path:      str of the path to the file
         :param keys:           list of str of the order of keys to use
         :param pretty_columns: bool if True will make the columns pretty
         :return:               str of the converted markdown tables
@@ -362,9 +364,11 @@ class SeabornTable(object):
         keys = keys or tables.keys()
         ret = ['#### ' + key + '\n' + tables[key].obj_to_mark_down(
             pretty_columns=pretty_columns) for key in keys]
-        return '\n\n'.join(ret)
+        ret = '\n\n'.join(ret)
+        cls._save_file(file_path, ret)
+        return ret
 
-    def obj_to_mark_down(self, title_columns=True, file_path=None,
+    def obj_to_mark_down(self, file_path=None, title_columns=True,
                          quote_numbers=True):
         """
         This will return a str of a mark down text
@@ -377,27 +381,22 @@ class SeabornTable(object):
                in self.columns]]
         md += [[self._safe_str(row[col], quote_numbers)
                 for col in self.columns] for row in self.table]
-        widths = []
 
-        for col in range(len(md[0])):
-            width = max([len(row[col]) + 1 for row in md])
-            widths.append(min(300, width))
-
+        widths = self._get_column_widths(md)
         md.insert(1, [":" + '-' * (width - 1) for width in widths])
         md = ['| '.join([row[c].ljust(widths[c])
                          for c in range(len(row))]) for row in md]
         ret = '| ' + ' |\n| '.join(md) + ' |'
-        if file_path is not None:
-            with open(file_path, 'wb') as fp:
-                fp.write(ret.encode('utf-8'))
+        self._save_file(file_path, ret)
         return ret
 
-    def obj_to_str(self, file_path, deliminator=None, tab=None):
+    def obj_to_str(self, file_path=None, deliminator=None, tab=None):
         self.deliminator = self.deliminator if deliminator is None \
             else deliminator
         self.tab = self.tab if tab is None else tab
-        with open(file_path, 'wb') as fp:
-            fp.write(str(self).encode('utf-8'))
+        ret = str(self)
+        self._save_file(file_path, ret)
+        return ret
 
     def obj_to_csv(self, quote_everything=False, space_columns=True,
                    file_path=None):
@@ -435,9 +434,7 @@ class SeabornTable(object):
         else:
             ret = '\n'.join(csv)
 
-        if file_path is not None:
-            with open(file_path, 'wb') as fp:
-                fp.write(ret.encode('utf-8'))
+        self._save_file(file_path, ret)
         return ret
 
     def obj_to_html(self, tab='', border=1, cell_padding=5, cell_spacing=1,
@@ -473,9 +470,7 @@ class SeabornTable(object):
         data = ('\n%s  ' % tab).join(data)
         ret = (ret % (border, cell_padding, cell_spacing, border_color, data)
                ).replace('\n', '\n%s' % tab)
-        if file_path is not None:
-            with open(file_path, 'wb') as fp:
-                fp.write(ret.encode('utf-8'))
+        self._save_file(file_path, ret)
         return ret
 
     def obj_to_file(self, file_path):
@@ -486,7 +481,7 @@ class SeabornTable(object):
         elif file_path.endswith('html'):
             self.obj_to_html(file_path=file_path)
         elif file_path.endswith('md'):
-            self.obj_to_mark_down(False, file_path=file_path)
+            self.obj_to_mark_down(file_path=file_path, title_columns=False)
         else:
             raise 'Unknown file type: %s' % file_path
 
@@ -697,7 +692,10 @@ class SeabornTable(object):
         """
         :return: str of the table
         """
-        column_widths = [self._column_width(
+        list_of_list = [self.columns] + +table [row[]
+        column_widths = self._get_column_widths()
+
+            [self._column_width(
             name=col, quote_numbers=False, repr_line_break=True)
                          for col in self.columns]
         ret = [self._row_to_str(
@@ -1085,6 +1083,15 @@ class SeabornTable(object):
                         return
 
     @staticmethod
+    def _save_file(file_path, text):
+        if file_path is None:
+            return
+        if isinstance(text, unicode):
+            text = text.encode('utf-8')
+        with open(file_path, 'wb') as fp:
+            fp.write(text)
+
+    @staticmethod
     def _html_cell(cell):
         head = '<th'
         if isinstance(cell, HTMLRowRespan):
@@ -1166,6 +1173,14 @@ class SeabornTable(object):
         if isinstance(value, list):
             return value[index]
         return value
+
+    def _get_column_widths(self, list_of_list, min_width=2, max_width=300,
+                           padding=1):
+        widths = []
+        for col in range(len(list_of_list[0])):
+            width = max([len(row[col]) + padding for row in list_of_list])
+            widths.append(max(min_width, min(max_width, width)))
+        return widths
 
     def _column_width(self, index=None, name=None, max_width=300, **kwargs):
         """
