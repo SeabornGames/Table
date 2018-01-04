@@ -128,7 +128,9 @@ class SeabornTable(object):
             table = [SeabornRow(column_index, row) for row in list_]
 
         elif isinstance(list_[0], (list, tuple)):
-            row_columns = row_columns or columns or list_[0]
+            row_columns = row_columns or columns
+            if len(row_columns) != len(list_[0]):
+                row_columns = list_[0]
             if list_[0] == row_columns:
                 list_ = list_[1:]
             column_index = cls._create_column_index(row_columns)
