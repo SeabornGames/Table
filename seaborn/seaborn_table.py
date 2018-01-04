@@ -862,8 +862,12 @@ class SeabornTable(object):
     def clear(self):
         self.table = []
 
-    def copy(self):
-        return self.__class__(self.table, self.columns, self.row_columns,
+    def copy(self, share_rows=False):
+        if share_rows:
+            return self.__class__(self.table, self.columns, self.row_columns,
+                              self.tab, self.key_on, self.deliminator)
+        else:
+            return self.__class__(self, self.columns, self.row_columns,
                               self.tab, self.key_on, self.deliminator)
 
     def set_column(self, item, value=None):
