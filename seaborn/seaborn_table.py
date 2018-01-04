@@ -772,7 +772,6 @@ class SeabornTable(object):
             other = SeabornTable(other)
         return self.table.__le__(other.table)
 
-    @property
     def __len__(self):
         return len(self.table)
 
