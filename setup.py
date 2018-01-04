@@ -11,7 +11,6 @@ setup(
     url='https://github.com/SeabornGames/SeabornTable',
     install_requires=[],
     extras_require={
-        'test': ['test-chain'],
     },
     py_modules=['seaborn.seaborn_table'],
     license='MIT License',
