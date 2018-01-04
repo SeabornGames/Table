@@ -116,4 +116,13 @@ _*.txt
 
 *.pyc
 .DS_Store
-
+*.egg-info
+build/*
+dist/*
+.pypirc
+venv/
+venv2/
+venv3/
+csv/
+txt/
+md/

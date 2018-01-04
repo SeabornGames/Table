@@ -2,7 +2,7 @@ import os
 import shutil
 import unittest
 
-from seaborn.seaborn_table import main
+from seaborn.seaborn_table import cli_converter
 
 PATH = os.path.split(os.path.abspath(__file__))[0]
 
@@ -17,18 +17,18 @@ class FileConversionTest(unittest.TestCase):
         if not os.path.exists(result_folder):
             os.mkdir(result_folder)
         source_file = os.path.join(PATH, 'data', 'test_file.%s' % source)
-        main(source_file, file(source, dest))
+        cli_converter(source_file, file(source, dest))
         self.cmp_file(source, dest)
         shutil.rmtree(result_folder)
 
     def cmp_file(self, source, ext):
         self.assertTrue(os.path.exists(file(source, ext)),
                         'File not created: %s'%file(source, ext))
-        with open(file('data', ext), 'r') as fp:
-            expected = fp.read().replace('\r', '').split('\n')
+        with open(file('data', ext), 'rb') as fp:
+            expected = fp.read().decode('utf-8').replace('\r', '').split('\n')
 
-        with open(file(source, ext), 'r') as fp:
-            result = fp.read().replace('\r', '').split('\n')
+        with open(file(source, ext), 'rb') as fp:
+            result = fp.read().decode('utf-8').replace('\r', '').split('\n')
 
         for i in range(len(result)):
             self.assertEqual(expected[i], result[i],

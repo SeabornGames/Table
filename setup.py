@@ -2,18 +2,17 @@ from setuptools import setup
 
 setup(
     name='seaborn_table',
-    version='1.2.5',
+    version='1.3.0',
     description='SeabornTable reads and writes tables in '
                 'csv and md and acts like a list and dict."',
     long_description='',
     author='Ben Christenson',
     author_email='Python@BenChristenson.com',
-    url='https://github.com/christensonb/SeabornTable',
+    url='https://github.com/SeabornGames/SeabornTable',
     install_requires=[],
     extras_require={
-        'test': ['test-chain'],
     },
-    py_modules=['seaborn.seaborn_table'],
+    packages=['seaborn.seaborn_table'],
     license='MIT License',
     classifiers=(
         'Intended Audience :: Developers',
@@ -25,6 +24,6 @@ setup(
         'Programming Language :: Python :: 3.5'),
     entry_points='''
         [console_scripts]
-        seaborn_table=seaborn.seaborn_table:main
+        seaborn_table=seaborn.seaborn_table:cli_converter
     ''',
 )

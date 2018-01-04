@@ -1,8 +1,8 @@
 import logging
 import os
 import sys
+import unittest
 
-from test_chain import TestChain, unittest
 
 from seaborn.seaborn_table import SeabornTable
 
@@ -15,28 +15,28 @@ logging.basicConfig(level=logging.DEBUG,
 PATH = os.path.split(os.path.abspath(__file__))[0]
 
 
-class ExampleTableTest(TestChain):
+class ExampleTableTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         answer = """
         Behave examples table with the following results::
-            | #  | column 1 | col2  | column 3 | output column  | output col2 |
-            | 0  | 1        | Hello | a        |                | 1           |
-            | 1  | 2        | Hello | a        |                | 2           |
-            | 2  | 1        | World | a        |                | 1           |
-            | 3  | 2        | World | a        |                | 2           |
-            | 4  | 2        | Hello | b        |                | 2           |
-            | 5  | 1        | World | b        |                | 1           |
-            | 6  | 2        | World | b        |                | 2           |
-            | 7  | 1        | Hello | c        |                | 1           |
-            | 8  | 2        | Hello | c        |                | 2           |
-            | 9  | 1        | World | c        |                | 1           |
-            | 10 | 2        | World | c        |                | 2           |
+            | #  | column 1 | col2  | column 3 | output column  | output col2
+            | 0  | 1        | Hello | a        |                | 1
+            | 1  | 2        | Hello | a        |                | 2
+            | 2  | 1        | World | a        |                | 1
+            | 3  | 2        | World | a        |                | 2
+            | 4  | 2        | Hello | b        |                | 2
+            | 5  | 1        | World | b        |                | 1
+            | 6  | 2        | World | b        |                | 2
+            | 7  | 1        | Hello | c        |                | 1
+            | 8  | 2        | Hello | c        |                | 2
+            | 9  | 1        | World | c        |                | 1
+            | 10 | 2        | World | c        |                | 2
         """.split('::')[-1]
         if isinstance(answer, bytes):
             answer = answer.decode('utf8')
         cls.answer = answer.strip().replace('\n            ', '\n')
-        cls.list_of_list = [[r.strip() for r in row.split('|')[1:-1]]
+        cls.list_of_list = [[r.strip() for r in row.split('|')[1:]]
                             for row in cls.answer.split('\n')]
         cls.list_of_list[0][4] += ' '
 
@@ -61,6 +61,7 @@ class ExampleTableTest(TestChain):
                 '#': lambda _row_index, **kwargs: _row_index},
             filter_func=row_filter,
             deliminator=' | ',
+            tab = '| ',
             max_size=100)
         self.assertEqual(self.answer, str(table))
         return table
@@ -68,20 +69,21 @@ class ExampleTableTest(TestChain):
     def test_sort_by_key(self):
         table = self.test_pertibate()
         table.deliminator = ' | '
+        table.tab = '| '
         table.sort_by_key(['column 1', 'column 3'])
         answer = """
-            | #  | column 1 | col2  | column 3 | output column  | output col2 |
-            | 0  | 1        | Hello | a        |                | 1           |
-            | 2  | 1        | World | a        |                | 1           |
-            | 5  | 1        | World | b        |                | 1           |
-            | 7  | 1        | Hello | c        |                | 1           |
-            | 9  | 1        | World | c        |                | 1           |
-            | 1  | 2        | Hello | a        |                | 2           |
-            | 3  | 2        | World | a        |                | 2           |
-            | 4  | 2        | Hello | b        |                | 2           |
-            | 6  | 2        | World | b        |                | 2           |
-            | 8  | 2        | Hello | c        |                | 2           |
-            | 10 | 2        | World | c        |                | 2           |
+            | #  | column 1 | col2  | column 3 | output column  | output col2
+            | 0  | 1        | Hello | a        |                | 1
+            | 2  | 1        | World | a        |                | 1
+            | 5  | 1        | World | b        |                | 1
+            | 7  | 1        | Hello | c        |                | 1
+            | 9  | 1        | World | c        |                | 1
+            | 1  | 2        | Hello | a        |                | 2
+            | 3  | 2        | World | a        |                | 2
+            | 4  | 2        | Hello | b        |                | 2
+            | 6  | 2        | World | b        |                | 2
+            | 8  | 2        | Hello | c        |                | 2
+            | 10 | 2        | World | c        |                | 2
         """.strip().replace('\n            ', '\n')
         log.debug(str(table))
         self.assertEqual(str(table), answer)
@@ -95,15 +97,18 @@ class ExampleTableTest(TestChain):
             return
 
     def test_list_of_list(self):
-        table = SeabornTable(self.list_of_list, deliminator=' | ')
-        print(table)
+        table = SeabornTable(self.list_of_list, deliminator=' | ',
+                             tab='| ')
+        log.debug('\nAnswer:\n%s\n\nResult:\n%s\n\n' % (
+            self.answer, str(table)))
         self.assertEqual(self.answer, str(table))
 
     def test_list_of_dict(self):
         columns = self.list_of_list[0]
         list_of_dict = [{k: row[i] for i, k in enumerate(columns)}
                         for row in self.list_of_list[1:]]
-        table = SeabornTable(list_of_dict, columns, deliminator=' | ')
+        table = SeabornTable(list_of_dict, columns, deliminator=' | ',
+                             tab='| ')
         self.assertEqual(self.answer, str(table))
 
     def test_dict_of_dict(self):
@@ -111,7 +116,8 @@ class ExampleTableTest(TestChain):
         dict_of_dict = {}
         for i, row in enumerate(self.list_of_list[1:]):
             dict_of_dict[i] = {k: row[i] for i, k in enumerate(columns)}
-        table = SeabornTable(dict_of_dict, columns, deliminator=' | ')
+        table = SeabornTable(dict_of_dict, columns, deliminator=' | ',
+                             tab = '| ')
         log.debug('\nAnswer:\n%s\n\nResult:\n%s\n\n' % (
             self.answer, str(table)))
         self.assertEqual(self.answer, str(table))
@@ -121,7 +127,8 @@ class ExampleTableTest(TestChain):
         dict_of_list = {}
         for i, k in enumerate(columns):
             dict_of_list[k] = [row[i] for row in self.list_of_list[1:]]
-        table = SeabornTable(dict_of_list, columns, deliminator=' | ')
+        table = SeabornTable(dict_of_list, columns, deliminator=' | ',
+                             tab = '| ')
         log.debug('\nAnswer:\n%s\n\nResult:\n%s\n\n' % (
             self.answer, str(table)))
         self.assertEqual(self.answer, str(table))
@@ -166,12 +173,14 @@ class ExampleTableTest(TestChain):
         header = word = text = ''
         for paragraph in paragraphs:
             header, text = paragraph.split('\n', 1)
-        testing = str(test[header.strip()].obj_to_mark_down(False))
+        testing = str(test[header.strip()].obj_to_mark_down(
+            title_columns=False))
         text = text.replace("```\n# comment\n```", "").strip()
         for word in ':- ':
             text = text.replace(word, '')
             testing = text.replace(word, '')
         testing = testing.replace(word, '')
+        log.debug('\nAnswer:\n%s\n\nResult:\n%s\n\n' % (text, testing))
 
         self.assertEqual(text, testing,
                          "Values don't match:\n%s\n%s" % (
