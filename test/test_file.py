@@ -2,7 +2,7 @@ import os
 import shutil
 import unittest
 
-from seaborn.seaborn_table import main
+from seaborn.seaborn_table import cli_converter
 
 PATH = os.path.split(os.path.abspath(__file__))[0]
 
@@ -17,7 +17,7 @@ class FileConversionTest(unittest.TestCase):
         if not os.path.exists(result_folder):
             os.mkdir(result_folder)
         source_file = os.path.join(PATH, 'data', 'test_file.%s' % source)
-        main(source_file, file(source, dest))
+        cli_converter(source_file, file(source, dest))
         self.cmp_file(source, dest)
         shutil.rmtree(result_folder)
 
