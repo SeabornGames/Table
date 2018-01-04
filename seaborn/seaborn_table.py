@@ -129,13 +129,14 @@ class SeabornTable(object):
 
         elif isinstance(list_[0], (list, tuple)):
             row_columns = row_columns or columns or []
-            if len(row_columns) != len(list_[0]):
+            if len(row_columns) < len(list_[0]):
                 row_columns = list_[0]
-            if list_[0] == row_columns:
+            if list_[0] != row_columns:
                 list_ = list_[1:]
             column_index = cls._create_column_index(row_columns)
-            table = [SeabornRow(column_index, row) for row in list_]
-
+            size = len(row_columns)
+            table = [SeabornRow(column_index, row + [None]*(size - len(row)))
+                     for row in list_]
         else:
             column_index = cls._create_column_index(columns or [])
             table = [SeabornRow(column_index, [row]) for row in list_]
@@ -240,7 +241,14 @@ class SeabornTable(object):
             if not remove_empty_rows or True in [bool(r) for r in row]:
                 data.append(row)
 
-        return cls.list_to_obj(data, columns=columns, key_on=key_on)
+        row_columns = data[0]
+        if len(row_columns) != len(set(row_columns)): # make unique
+            for i, col in enumerate(row_columns):
+                count = row_columns[:i].count(col)
+                row_columns[i] = '%s_%s'%(col, count) if count else col
+
+        return cls.list_to_obj(data[1:], columns=columns,
+                               row_columns=row_columns, key_on=key_on)
 
     @classmethod
     def file_to_obj(cls, file_path, columns=None):
@@ -534,6 +542,7 @@ class SeabornTable(object):
 
     @row_columns.setter
     def row_columns(self, value):
+        assert len(set(value)) == len(value), "Columns must be unique"
         self._row_columns = list(value)
         self._column_index.clear()
         for index, col in enumerate(value):
