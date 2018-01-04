@@ -131,7 +131,7 @@ class SeabornTable(object):
             row_columns = row_columns or columns or []
             if len(row_columns) < len(list_[0]):
                 row_columns = list_[0]
-            if list_[0] != row_columns:
+            if list_[0] == row_columns:
                 list_ = list_[1:]
             column_index = cls._create_column_index(row_columns)
             size = len(row_columns)

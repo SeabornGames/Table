@@ -99,7 +99,8 @@ class ExampleTableTest(TestChain):
     def test_list_of_list(self):
         table = SeabornTable(self.list_of_list, deliminator=' | ',
                              tab='| ')
-        print(table)
+        log.debug('\nAnswer:\n%s\n\nResult:\n%s\n\n' % (
+            self.answer, str(table)))
         self.assertEqual(self.answer, str(table))
 
     def test_list_of_dict(self):
