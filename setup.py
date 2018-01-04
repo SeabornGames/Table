@@ -11,9 +11,8 @@ setup(
     url='https://github.com/SeabornGames/SeabornTable',
     install_requires=[],
     extras_require={
-        'test': ['test-chain'],
     },
-    py_modules=['seaborn.seaborn_table'],
+    packages=['seaborn.seaborn_table'],
     license='MIT License',
     classifiers=(
         'Intended Audience :: Developers',
@@ -25,6 +24,6 @@ setup(
         'Programming Language :: Python :: 3.5'),
     entry_points='''
         [console_scripts]
-        seaborn_table=seaborn.seaborn_table:main
+        seaborn_table=seaborn.seaborn_table:cli_converter
     ''',
 )
