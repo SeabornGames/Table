@@ -8,7 +8,7 @@ setup(
     long_description='',
     author='Ben Christenson',
     author_email='Python@BenChristenson.com',
-    url='https://github.com/orgs/SeabornGames/SeabornTable',
+    url='https://github.com/SeabornGames/SeabornTable',
     install_requires=[],
     extras_require={
         'test': ['test-chain'],
