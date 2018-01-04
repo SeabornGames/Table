@@ -1,8 +1,8 @@
 import logging
 import os
 import sys
+import unittest
 
-from test_chain import TestChain, unittest
 
 from seaborn.seaborn_table import SeabornTable
 
@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.DEBUG,
 PATH = os.path.split(os.path.abspath(__file__))[0]
 
 
-class ExampleTableTest(TestChain):
+class ExampleTableTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         answer = """
