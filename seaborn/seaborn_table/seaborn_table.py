@@ -1281,7 +1281,7 @@ class SeabornRow(list):
 
     def obj_to_dict(self):
         return {col: list.__getitem__(self, i)
-                for col, i in self.column_index.items()}
+            for col, i in self.column_index.items()}
 
     def get(self, key, default=None):
         index = self.column_index.get(key, None)
