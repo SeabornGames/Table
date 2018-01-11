@@ -1,0 +1,6 @@
+- name: test_file
+  service: python_tests
+  command: python test/test_file.py
+- name: test_seaborn_table
+  service: python_tests
+  command: python test/test_seaborn_table.py
