@@ -44,7 +44,6 @@ class ExampleTableTest(unittest.TestCase):
         self.maxDiff = None
 
     def test_pertibate(self):
-        self.assertTrue(False)      #TODO remove
         def row_filter(**kwargs):
             if (kwargs['column 1'] == 1 and kwargs['column 3'] == 'b' and
                         kwargs['col2'] == 'Hello'):
