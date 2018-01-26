@@ -186,6 +186,14 @@ class ExampleTableTest(unittest.TestCase):
                          "Values don't match:\n%s\n%s" % (
                              repr(testing), repr(text)))
 
+    def test_fancy(self):
+        expected = SeabornTable.grid_to_obj(os.path.join(
+            PATH,'result','grid.txt'))
+        result = SeabornTable.mark_down_to_obj(
+            os.path.join(PATH, 'data', 'test_file.md'))
+
+        self.assertEqual(expected.obj_to_grid(), result.obj_to_grid())
+
 
 if __name__ == '__main__':
     unittest.main()

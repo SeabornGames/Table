@@ -21,6 +21,23 @@ import sys
 from collections import OrderedDict
 from functools import reduce
 
+DELIM_TAGS = ['t', 'ti', 'tr', 'tl',
+              'l', 'li', 'lmi',
+              'r', 'ri', 'rmi',
+              'b', 'bi', 'br', 'bl',
+              'iv', 'ih', 'ii', 'imi']
+
+DIV_DELIMS = {"top": ['tl', 'ti', 't', 'tr'],
+             "div": ['lmi', 'imi', 'b', 'rmi'],
+             "mid": ['li', 'ii', 'ih', 'ri'],
+             "btm": ['bl', 'bi', 'b', 'br']
+             }
+
+FANCY = {'t':'═', 'ti':'╤', 'tr':'╕', 'tl':'╒',
+         'l':'│', 'li':'├', 'lmi':'╞',
+         'r':'│', 'ri':'┤', 'rmi':'╡',
+         'b':'═', 'bi':'╧', 'br':'╛', 'bl':'╘',
+         'iv':'│', 'ih':'─', 'ii':'┼', 'imi':'╪'}
 
 class SeabornTable(object):
     DEFAULT_DELIMINATOR = u'\t'
@@ -251,6 +268,37 @@ class SeabornTable(object):
                                row_columns=row_columns, key_on=key_on)
 
     @classmethod
+    def grid_to_obj(cls, file_path=None, text='', delim={}, columns=None, key_on=None):
+
+        for tag in DELIM_TAGS:
+            delim[tag] = delim[tag] if tag in delim.keys() else FANCY[tag]
+
+        if file_path is not None and os.path.exists(file_path):
+            with open(file_path, 'rb') as f:
+                text = f.read()
+        if sys.version_info[0] == 3 and isinstance(text, bytes):
+            text = text.decode(SeabornTable.ENCODING)
+        data = []
+        # text = text.replace('\xdf', 'B')
+        text = text.replace('\xef\xbb\xbf', '')
+        if text.find('\r\n') == -1:
+            lines = text.split('\n')
+        else:
+            lines = text.split('\r\n')
+        data=[]
+        for i in range(len(lines)):
+            if i % 2 == 1:
+                data += [lines[i][1:-1].strip().split(delim['iv'])]
+        row_columns = data[0]
+        if len(row_columns) != len(set(row_columns)): # make unique
+            for i, col in enumerate(row_columns):
+                count = row_columns[:i].count(col)
+                row_columns[i] = '%s_%s'%(col, count) if count else col
+        return cls.list_to_obj(data[1:], columns=columns,
+                               row_columns=row_columns, key_on=key_on)
+
+
+    @classmethod
     def file_to_obj(cls, file_path, columns=None):
         if file_path.endswith('.txt'):
             return cls.str_to_obj(file_path=file_path, columns=columns)
@@ -424,6 +472,68 @@ class SeabornTable(object):
         self._save_file(file_path, ret)
         return ret
 
+    def obj_to_grid(self, file_path=None, delim={}, tab=None):
+        """
+        
+        :param file_path:   path to data file, defaults to 
+                            self's contents if left alone
+        :param deliminator: dict of deliminators, defaults to 
+                            obj_to_str's method:
+            ['t']:      top edge
+            ['ti']:     top intersect
+            ['tr']:     top-right corner
+            ['tl']:     top-left corner
+            ['l']:      left edge
+            ['li']:     left intersect
+            ['lmi']:    left major intersect
+            ['r']:      right edge
+            ['ri']:     right intersect
+            ['rmi']:    right major intersect
+            ['b']:      bottom edge
+            ['bi']:     bottom intersect
+            ['br']:     bottom-right corner
+            ['bl']:     bottom-left corner
+            ['iv']:     inside vertical
+            ['ih']:     inside horizontle
+            ['ii']:     inside intersection
+            ['imi']:    inside major intersection
+        :param tab: 
+        :return: 
+        """
+
+        for tag in DELIM_TAGS:
+            delim[tag] = delim[tag] if tag in delim.keys() else FANCY[tag]
+
+        tab = self.tab if tab is None else tab
+
+        list_of_list = [[self._safe_str(cell, quote_numbers=False)
+                         for cell in row] for row in self]
+        list_of_list = [self.columns] + list_of_list
+
+        column_widths = self._get_column_widths(list_of_list,
+                                                padding=0, pad_last_column=True)
+        ret = [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
+               for row in list_of_list]
+        grid_row={}
+
+        for key in DIV_DELIMS.keys():
+            draw = DIV_DELIMS[key]
+            grid_row[key] = delim[draw[0]]
+            grid_row[key] += delim[draw[1]].join(
+                [delim[draw[2]]*width
+                 for width in column_widths])
+            grid_row[key] += delim[draw[3]]
+
+        ret = [delim['l']+delim['iv'].join(row)+delim['r'] for row in ret]
+        header = [grid_row['top'], ret[0], grid_row['div']]
+        body = [[row, grid_row['mid']] for row in ret[1:]]
+        body = [item for pair in body for item in pair][:-1]
+        ret = header + body + [grid_row['btm']]
+        ret = tab + (u'\n'+tab).join(ret)
+        self._save_file(file_path, ret)
+        return ret
+
+
     def obj_to_csv(self, quote_everything=False, space_columns=True,
                    file_path=None):
         """
@@ -500,7 +610,7 @@ class SeabornTable(object):
         elif file_path.endswith('md'):
             self.obj_to_mark_down(file_path=file_path, title_columns=False)
         else:
-            raise 'Unknown file type: %s' % file_path
+            raise Exception('Unknown file type: %s' % file_path)
 
     @property
     def tab(self):
