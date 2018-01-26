@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='seaborn_table',
-    version='1.3.0',
+    version='1.3.1',
     description='SeabornTable reads and writes tables in '
                 'csv and md and acts like a list and dict."',
     long_description='',
