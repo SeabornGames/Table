@@ -188,7 +188,7 @@ class ExampleTableTest(unittest.TestCase):
 
     def test_fancy(self):
         expected = SeabornTable.grid_to_obj(os.path.join(
-            PATH,'result','grid.txt'))
+            PATH,'data','test.grid'))
         result = SeabornTable.mark_down_to_obj(
             os.path.join(PATH, 'data', 'test_file.md'))
 

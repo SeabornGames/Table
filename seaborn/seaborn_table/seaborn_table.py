@@ -30,8 +30,7 @@ DELIM_TAGS = ['t', 'ti', 'tr', 'tl',
 DIV_DELIMS = {"top": ['tl', 'ti', 't', 'tr'],
              "div": ['lmi', 'imi', 'b', 'rmi'],
              "mid": ['li', 'ii', 'ih', 'ri'],
-             "btm": ['bl', 'bi', 'b', 'br']
-             }
+             "btm": ['bl', 'bi', 'b', 'br']}
 
 FANCY = {'t':'═', 'ti':'╤', 'tr':'╕', 'tl':'╒',
          'l':'│', 'li':'├', 'lmi':'╞',
@@ -278,8 +277,6 @@ class SeabornTable(object):
                 text = f.read()
         if sys.version_info[0] == 3 and isinstance(text, bytes):
             text = text.decode(SeabornTable.ENCODING)
-        data = []
-        # text = text.replace('\xdf', 'B')
         text = text.replace('\xef\xbb\xbf', '')
         if text.find('\r\n') == -1:
             lines = text.split('\n')
@@ -302,6 +299,8 @@ class SeabornTable(object):
     def file_to_obj(cls, file_path, columns=None):
         if file_path.endswith('.txt'):
             return cls.str_to_obj(file_path=file_path, columns=columns)
+        elif file_path.endswith('.grid'):
+            return cls.grid_to_obj(file_path=file_path, columns=columns)
         elif file_path.endswith('.md'):
             return cls.mark_down_to_obj(file_path=file_path, columns=columns)
         elif file_path.endswith('.csv'):
@@ -520,7 +519,7 @@ class SeabornTable(object):
             draw = DIV_DELIMS[key]
             grid_row[key] = delim[draw[0]]
             grid_row[key] += delim[draw[1]].join(
-                [delim[draw[2]]*width
+                [delim[draw[2]] * width
                  for width in column_widths])
             grid_row[key] += delim[draw[3]]
 
