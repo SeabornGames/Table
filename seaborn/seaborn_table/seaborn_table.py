@@ -267,7 +267,17 @@ class SeabornTable(object):
                                row_columns=row_columns, key_on=key_on)
 
     @classmethod
-    def grid_to_obj(cls, file_path=None, text='', delim={}, columns=None, key_on=None):
+    def grid_to_obj(cls, file_path=None, text='', delim={},
+                    columns=None, key_on=None):
+        """
+        This will convert a csv file or csv text into a seaborn table
+        and return it
+        :param file_path: str of the path to the file
+        :param text: str of the csv text
+        :param columns: list of str of columns to use
+        :param key_on: list of str of columns to key on
+        :return: SeabornTable
+        """
 
         for tag in DELIM_TAGS:
             delim[tag] = delim[tag] if tag in delim.keys() else FANCY[tag]
@@ -493,11 +503,12 @@ class SeabornTable(object):
             ['br']:     bottom-right corner
             ['bl']:     bottom-left corner
             ['iv']:     inside vertical
-            ['ih']:     inside horizontle
+            ['ih']:     inside horizontal
             ['ii']:     inside intersection
             ['imi']:    inside major intersection
-        :param tab: 
-        :return: 
+        :param tab:     string of offset of the table
+        :return:        string representing the grid formation
+                        of the relevant data
         """
 
         for tag in DELIM_TAGS:
