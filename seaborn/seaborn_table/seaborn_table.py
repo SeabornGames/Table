@@ -35,14 +35,6 @@ class SeabornTable(object):
              'bottom right corner': '╛',    'bottom left instersect': '╘',
              'internal vertical edge': '│', 'internal horizontal edge': '─', 
              'internal intersect': '┼',     'internal major intersect': '╪'}
-    DIV_DELIMS = {"top":    ['top left corner', 'top intersect',
-                             'top edge', 'top right corner'],
-                  "divide": ['left major intersect', 'internal major intersect', 
-                             'bottom edge', 'right major intersect'],
-                  "middle": ['left intersect', 'internal intersect', 
-                             'internal horizontal edge', 'right intersect'],
-                  "bottom": ['bottom left instersect', 'bottom intersect',
-                             'bottom edge', 'bottom right corner']}
 
     def __init__(self, table=None, columns=None, row_columns=None, tab=None,
                  key_on=None, deliminator=None, grid_delims = {}):
@@ -515,6 +507,16 @@ class SeabornTable(object):
                         of the relevant data
         """
 
+        div_delims = {"top": ['top left corner', 'top intersect',
+                              'top edge', 'top right corner'],
+                      "divide": ['left major intersect',
+                                 'internal major intersect',
+                                 'bottom edge', 'right major intersect'],
+                      "middle": ['left intersect', 'internal intersect',
+                                 'internal horizontal edge', 'right intersect'],
+                      "bottom": ['bottom left instersect', 'bottom intersect',
+                                 'bottom edge', 'bottom right corner']}
+
         for tag in self.grid_delims.keys():
             delim[tag] = delim[tag] if tag in delim.keys() \
                 else self.grid_delims[tag]
@@ -531,8 +533,8 @@ class SeabornTable(object):
                for row in list_of_list]
         grid_row={}
 
-        for key in self.DIV_DELIMS.keys():
-            draw = self.DIV_DELIMS[key]
+        for key in div_delims.keys():
+            draw = div_delims[key]
             grid_row[key] = delim[draw[0]]
             grid_row[key] += delim[draw[1]].join(
                 [delim[draw[2]] * width
