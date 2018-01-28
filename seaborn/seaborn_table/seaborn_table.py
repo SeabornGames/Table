@@ -25,15 +25,24 @@ class SeabornTable(object):
     DEFAULT_DELIMINATOR = u'\t'
     DEFAULT_TAB = u''
     ENCODING = 'utf-8'
-    FANCY = {'t': '═', 'ti': '╤', 'tr': '╕', 'tl': '╒',
-             'l': '│', 'li': '├', 'lmi': '╞',
-             'r': '│', 'ri': '┤', 'rmi': '╡',
-             'b': '═', 'bi': '╧', 'br': '╛', 'bl': '╘',
-             'iv': '│', 'ih': '─', 'ii': '┼', 'imi': '╪'}
-    DIV_DELIMS = {"top": ['tl', 'ti', 't', 'tr'],
-                  "divide": ['lmi', 'imi', 'b', 'rmi'],
-                  "middle": ['li', 'ii', 'ih', 'ri'],
-                  "bottom": ['bl', 'bi', 'b', 'br']}
+    FANCY = {'top edge': '═',               'top intersect': '╤',
+             'top right corner': '╕',       'top left corner': '╒',
+             'left edge': '│',              'left intersect': '├',
+             'left major intersect': '╞',
+             'right edge': '│',             'right intersect': '┤',
+             'right major intersect': '╡',
+             'bottom edge': '═',            'bottom intersect': '╧',
+             'bottom right corner': '╛',    'bottom left instersect': '╘',
+             'internal vertical edge': '│', 'internal horizontal edge': '─', 
+             'internal intersect': '┼',     'internal major intersect': '╪'}
+    DIV_DELIMS = {"top":    ['top left corner', 'top intersect',
+                             'top edge', 'top right corner'],
+                  "divide": ['left major intersect', 'internal major intersect', 
+                             'bottom edge', 'right major intersect'],
+                  "middle": ['left intersect', 'internal intersect', 
+                             'internal horizontal edge', 'right intersect'],
+                  "bottom": ['bottom left instersect', 'bottom intersect',
+                             'bottom edge', 'bottom right corner']}
 
     def __init__(self, table=None, columns=None, row_columns=None, tab=None,
                  key_on=None, deliminator=None, grid_delims = {}):
@@ -217,7 +226,7 @@ class SeabornTable(object):
         if sys.version_info[0] == 3 and isinstance(text, bytes):
             text = text.decode(SeabornTable.ENCODING)
         data = []
-        # text = text.replace('\xdf', 'B')
+        # text = text.replace('\xdf', 'bottom edge')
         text = text.replace('\xef\xbb\xbf', '')
         if text.find('\r\n') == -1:
             lines = text.split('\n')
@@ -289,7 +298,8 @@ class SeabornTable(object):
         data=[]
         for i in range(len(lines)):
             if i % 2 == 1:
-                data += [lines[i][1:-1].strip().split(delim['iv'])]
+                data += [lines[i][1:-1].strip().split(
+                    delim['internal vertical edge'])]
         row_columns = data[0]
         if len(row_columns) != len(set(row_columns)): # make unique
             for i, col in enumerate(row_columns):
@@ -482,24 +492,24 @@ class SeabornTable(object):
                             self's contents if left alone
         :param deliminator: dict of deliminators, defaults to 
                             obj_to_str's method:
-            ['t']:      top edge
-            ['ti']:     top intersect
-            ['tr']:     top-right corner
-            ['tl']:     top-left corner
-            ['l']:      left edge
-            ['li']:     left intersect
-            ['lmi']:    left major intersect
-            ['r']:      right edge
-            ['ri']:     right intersect
-            ['rmi']:    right major intersect
-            ['b']:      bottom edge
-            ['bi']:     bottom intersect
-            ['br']:     bottom-right corner
-            ['bl']:     bottom-left corner
-            ['iv']:     inside vertical
-            ['ih']:     inside horizontal
-            ['ii']:     inside intersection
-            ['imi']:    inside major intersection
+            ['top edge']:      top edge
+            ['top intersect']:     top intersect
+            ['top right corner']:     top-right corner
+            ['top left corner']:     top-left corner
+            ['left edge']:      left edge
+            ['left intersect']:     left intersect
+            ['left major intersect']:    left major intersect
+            ['right edge']:      right edge
+            ['right intersect']:     right intersect
+            ['right major intersect']:    right major intersect
+            ['bottom edge']:      bottom edge
+            ['bottom intersect']:     bottom intersect
+            ['bottom right corner']:     bottom-right corner
+            ['bottom left corner']:     bottom-left corner
+            ['internal vertical edge']:     inside vertical
+            ['internal horizontal edge']:     inside horizontal
+            ['internal intersect']:     inside intersection
+            ['internal major intersect']:    inside major intersection
         :param tab:     string of offset of the table
         :return:        string representing the grid formation
                         of the relevant data
@@ -529,7 +539,8 @@ class SeabornTable(object):
                  for width in column_widths])
             grid_row[key] += delim[draw[3]]
 
-        ret = [delim['l']+delim['iv'].join(row)+delim['r'] for row in ret]
+        ret = [delim['left edge']+delim['internal vertical edge'].join(row)+
+               delim['right edge'] for row in ret]
         header = [grid_row["top"], ret[0], grid_row["divide"]]
         body = [[row, grid_row["middle"]] for row in ret[1:]]
         body = [item for pair in body for item in pair][:-1]
