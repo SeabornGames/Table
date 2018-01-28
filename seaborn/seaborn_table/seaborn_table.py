@@ -21,30 +21,22 @@ import sys
 from collections import OrderedDict
 from functools import reduce
 
-DELIM_TAGS = ['t', 'ti', 'tr', 'tl',
-              'l', 'li', 'lmi',
-              'r', 'ri', 'rmi',
-              'b', 'bi', 'br', 'bl',
-              'iv', 'ih', 'ii', 'imi']
-
-DIV_DELIMS = {"top": ['tl', 'ti', 't', 'tr'],
-             "div": ['lmi', 'imi', 'b', 'rmi'],
-             "mid": ['li', 'ii', 'ih', 'ri'],
-             "btm": ['bl', 'bi', 'b', 'br']}
-
-FANCY = {'t':'═', 'ti':'╤', 'tr':'╕', 'tl':'╒',
-         'l':'│', 'li':'├', 'lmi':'╞',
-         'r':'│', 'ri':'┤', 'rmi':'╡',
-         'b':'═', 'bi':'╧', 'br':'╛', 'bl':'╘',
-         'iv':'│', 'ih':'─', 'ii':'┼', 'imi':'╪'}
-
 class SeabornTable(object):
     DEFAULT_DELIMINATOR = u'\t'
     DEFAULT_TAB = u''
     ENCODING = 'utf-8'
+    FANCY = {'t': '═', 'ti': '╤', 'tr': '╕', 'tl': '╒',
+             'l': '│', 'li': '├', 'lmi': '╞',
+             'r': '│', 'ri': '┤', 'rmi': '╡',
+             'b': '═', 'bi': '╧', 'br': '╛', 'bl': '╘',
+             'iv': '│', 'ih': '─', 'ii': '┼', 'imi': '╪'}
+    DIV_DELIMS = {"top": ['tl', 'ti', 't', 'tr'],
+                  "divide": ['lmi', 'imi', 'b', 'rmi'],
+                  "middle": ['li', 'ii', 'ih', 'ri'],
+                  "bottom": ['bl', 'bi', 'b', 'br']}
 
     def __init__(self, table=None, columns=None, row_columns=None, tab=None,
-                 key_on=None, deliminator=None):
+                 key_on=None, deliminator=None, grid_delims = {}):
         """
         :param table: obj can be list of list or list of dict
         :param columns: list of str of the columns in the table
@@ -54,6 +46,7 @@ class SeabornTable(object):
         :param deliminator: str to separate the columns such as , \t or |
         """
         self._deliminator = self.DEFAULT_DELIMINATOR
+        self.grid_delims = grid_delims or self.FANCY
         self._tab = self.DEFAULT_TAB
         self._row_columns = []
         self._column_index = OrderedDict()
@@ -270,17 +263,18 @@ class SeabornTable(object):
     def grid_to_obj(cls, file_path=None, text='', delim={},
                     columns=None, key_on=None):
         """
-        This will convert a csv file or csv text into a seaborn table
+        This will convert a grid file or grid text into a seaborn table
         and return it
         :param file_path: str of the path to the file
-        :param text: str of the csv text
+        :param text: str of the grid text
         :param columns: list of str of columns to use
         :param key_on: list of str of columns to key on
         :return: SeabornTable
         """
 
-        for tag in DELIM_TAGS:
-            delim[tag] = delim[tag] if tag in delim.keys() else FANCY[tag]
+        for tag in cls.FANCY.keys():
+            delim[tag] = delim[tag] if tag in delim.keys() \
+                else cls.FANCY[tag]
 
         if file_path is not None and os.path.exists(file_path):
             with open(file_path, 'rb') as f:
@@ -511,8 +505,9 @@ class SeabornTable(object):
                         of the relevant data
         """
 
-        for tag in DELIM_TAGS:
-            delim[tag] = delim[tag] if tag in delim.keys() else FANCY[tag]
+        for tag in self.grid_delims.keys():
+            delim[tag] = delim[tag] if tag in delim.keys() \
+                else self.grid_delims[tag]
 
         tab = self.tab if tab is None else tab
 
@@ -526,8 +521,8 @@ class SeabornTable(object):
                for row in list_of_list]
         grid_row={}
 
-        for key in DIV_DELIMS.keys():
-            draw = DIV_DELIMS[key]
+        for key in self.DIV_DELIMS.keys():
+            draw = self.DIV_DELIMS[key]
             grid_row[key] = delim[draw[0]]
             grid_row[key] += delim[draw[1]].join(
                 [delim[draw[2]] * width
@@ -535,10 +530,10 @@ class SeabornTable(object):
             grid_row[key] += delim[draw[3]]
 
         ret = [delim['l']+delim['iv'].join(row)+delim['r'] for row in ret]
-        header = [grid_row['top'], ret[0], grid_row['div']]
-        body = [[row, grid_row['mid']] for row in ret[1:]]
+        header = [grid_row["top"], ret[0], grid_row["divide"]]
+        body = [[row, grid_row["middle"]] for row in ret[1:]]
         body = [item for pair in body for item in pair][:-1]
-        ret = header + body + [grid_row['btm']]
+        ret = header + body + [grid_row["bottom"]]
         ret = tab + (u'\n'+tab).join(ret)
         self._save_file(file_path, ret)
         return ret
