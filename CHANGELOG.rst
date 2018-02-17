@@ -1,3 +1,8 @@
+Changes in 1.3.1
+================
+
+* Removed un-needed __init__.py and changed name to seaborn-table
+
 Changes in 1.3.0
 ================
 
