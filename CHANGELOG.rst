@@ -1,7 +1,10 @@
 Changes in 1.3.1
 ================
 
-* Removed un-needed __init__.py and changed name to seaborn-table
+* Reorganized code to table.table structure
+
+* Added seaborn-hack requirement
+
 
 Changes in 1.3.0
 ================
