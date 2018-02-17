@@ -1,11 +1,14 @@
 from setuptools import setup
+import os
+with open(os.path.join(os.path.abspath(__file__), 'README.rst')) as f:
+    long_description = f.read()
 
 setup(
     name='seaborn_table',
     version='1.3.0',
     description='SeabornTable reads and writes tables in '
                 'csv and md and acts like a list and dict."',
-    long_description='',
+    long_description=long_description,
     author='Ben Christenson',
     author_email='Python@BenChristenson.com',
     url='https://github.com/SeabornGames/SeabornTable',
