@@ -23,7 +23,7 @@ class FileConversionTest(unittest.TestCase):
 
     def cmp_file(self, source, ext):
         self.assertTrue(os.path.exists(file(source, ext)),
-                        'File not created: %s'%file(source, ext))
+                        'File not created: %s' % file(source, ext))
         with open(file('data', ext), 'rb') as fp:
             expected = fp.read().decode('utf-8').replace('\r', '').split('\n')
 
@@ -32,7 +32,7 @@ class FileConversionTest(unittest.TestCase):
 
         for i in range(len(result)):
             self.assertEqual(expected[i], result[i],
-                         "Failure creating filetype: %s" % ext)
+                             "Failure creating filetype: %s" % ext)
 
     def test_txt_to_md(self):
         self.file_conversion('txt', 'md')
@@ -69,6 +69,7 @@ class FileConversionTest(unittest.TestCase):
 
     def test_md_to_html(self):
         self.file_conversion('md', 'html')
+
 
 if __name__ == '__main__':
     unittest.main()
