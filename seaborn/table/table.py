@@ -70,7 +70,7 @@ class SeabornTable(object):
             self._column_index, self.table = temp._column_index, temp.table
             self._row_columns = list(self._column_index.keys())
         elif getattr(table, 'headings', None) is not None and \
-                getattr(table, 'row_columns', None) is not None:
+                        getattr(table, 'row_columns', None) is not None:
             self.row_columns = row_columns or columns or table.headings
             self.table = [SeabornRow(self._column_index,
                                      [row[c] for c in self.row_columns])
@@ -135,7 +135,7 @@ class SeabornTable(object):
                 list_ = list_[1:]
             column_index = cls._create_column_index(row_columns)
             size = len(row_columns)
-            table = [SeabornRow(column_index, row + [None]*(size - len(row)))
+            table = [SeabornRow(column_index, row + [None] * (size - len(row)))
                      for row in list_]
         else:
             column_index = cls._create_column_index(columns or [])
@@ -242,10 +242,10 @@ class SeabornTable(object):
                 data.append(row)
 
         row_columns = data[0]
-        if len(row_columns) != len(set(row_columns)): # make unique
+        if len(row_columns) != len(set(row_columns)):  # make unique
             for i, col in enumerate(row_columns):
                 count = row_columns[:i].count(col)
-                row_columns[i] = '%s_%s'%(col, count) if count else col
+                row_columns[i] = '%s_%s' % (col, count) if count else col
 
         return cls.list_to_obj(data[1:], columns=columns,
                                row_columns=row_columns, key_on=key_on)
@@ -797,7 +797,7 @@ class SeabornTable(object):
                     return True
             return False
         elif (isinstance(value, SeabornRow) and
-              getattr(value, 'column_index') == self._column_index):
+                      getattr(value, 'column_index') == self._column_index):
             return value in self.table
         elif isinstance(value, SeabornRow):
             value = [value[k] for k in self.row_columns]
@@ -873,10 +873,10 @@ class SeabornTable(object):
     def copy(self, share_rows=False):
         if share_rows:
             return self.__class__(self.table, self.columns, self.row_columns,
-                              self.tab, self.key_on, self.deliminator)
+                                  self.tab, self.key_on, self.deliminator)
         else:
             return self.__class__(self, self.columns, self.row_columns,
-                              self.tab, self.key_on, self.deliminator)
+                                  self.tab, self.key_on, self.deliminator)
 
     def set_column(self, item, value=None):
         if hasattr(value, '__call__'):
@@ -922,7 +922,7 @@ class SeabornTable(object):
         if index is None:
             self.row_columns += [column]
             if self.row_columns is not self.columns and \
-                    column not in self.columns:
+                            column not in self.columns:
                 self.columns.append(column)
         else:
             self.row_columns = self.row_columns[:index] + [column] \
@@ -983,7 +983,7 @@ class SeabornTable(object):
             ret = ret.decode(SeabornTable.ENCODING)
         if quote_numbers and isinstance(cell, BASESTRING):
             if (ret.replace('.', '').isdigit() or
-                    u'"' in ret or ret in [u'False', u'True']):
+                        u'"' in ret or ret in [u'False', u'True']):
                 ret = u'"%s"' % ret
 
         if repr_line_break:
@@ -1082,7 +1082,7 @@ class SeabornTable(object):
             or in alphabetical order
         """
         return isinstance(dict_, OrderedDict) and dict_.keys() or \
-            dict_ and sorted(dict_.keys()) or []
+               dict_ and sorted(dict_.keys()) or []
 
     @staticmethod
     def _key_on_columns(key_on, columns):
