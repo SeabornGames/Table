@@ -46,6 +46,9 @@ class FileConversionTest(unittest.TestCase):
     def test_txt_to_html(self):
         self.file_conversion('txt', 'html')
 
+    def test_txt_to_grid(self):
+        self.file_conversion('txt', 'grid')
+
     def test_csv_to_md(self):
         self.file_conversion('csv', 'md')
 
@@ -57,6 +60,9 @@ class FileConversionTest(unittest.TestCase):
 
     def test_csv_to_html(self):
         self.file_conversion('csv', 'html')
+
+    def test_csv_to_grid(self):
+        self.file_conversion('csv', 'grid')
 
     def test_md_to_md(self):
         self.file_conversion('md', 'md')
@@ -70,6 +76,23 @@ class FileConversionTest(unittest.TestCase):
     def test_md_to_html(self):
         self.file_conversion('md', 'html')
 
+    def test_md_to_grid(self):
+        self.file_conversion('md', 'grid')
+
+    def test_grid_to_md(self):
+        self.file_conversion('grid', 'md')
+
+    def test_grid_to_grid(self):
+        self.file_conversion('grid', 'grid')
+
+    def test_grid_to_csv(self):
+        self.file_conversion('grid', 'csv')
+
+    def test_grid_to_txt(self):
+        self.file_conversion('grid', 'txt')
+
+    def test_grid_to_html(self):
+        self.file_conversion('grid', 'html')
 
 if __name__ == '__main__':
     unittest.main()

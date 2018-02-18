@@ -70,12 +70,12 @@ class SeabornTable(object):
             self._row_columns = list(table[0].column_index.keys())
             self.table = table
         elif isinstance(table, dict):
-            temp = SeabornTable.dict_to_obj(table, columns, row_columns,
+            temp = self.dict_to_obj(table, columns, row_columns,
                                             key_on=key_on)
             self._column_index, self.table = temp._column_index, temp.table
             self._row_columns = list(self._column_index.keys())
         elif isinstance(table, list):
-            temp = SeabornTable.list_to_obj(table, columns, row_columns,
+            temp = self.list_to_obj(table, columns, row_columns,
                                             key_on=key_on)
             self._column_index, self.table = temp._column_index, temp.table
             self._row_columns = list(self._column_index.keys())
@@ -310,7 +310,7 @@ class SeabornTable(object):
             with open(file_path, 'rb') as f:
                 text = f.read()
         if sys.version_info[0] == 3 and isinstance(text, bytes):
-            text = text.decode(SeabornTable.ENCODING)
+            text = text.decode(cls.ENCODING)
         text = text.strip().split('\n')
         if len(text) == 1:
             text = text[0].split('\r')
@@ -381,7 +381,7 @@ class SeabornTable(object):
                 continue
             assert row[0] == '|' and row[-1] == '|', \
                 'The following line is formatted correctly: %s' % row
-            table.append([SeabornTable._clean_cell(cell) for cell in
+            table.append([cls._clean_cell(cell) for cell in
                           row[1:-1].split('|')])
         return cls(table=table[2:], columns=columns or table[0], key_on=key_on)
 
@@ -583,7 +583,7 @@ class SeabornTable(object):
     @tab.setter
     def tab(self, value):
         if sys.version_info[0] == 2:
-            value = value.decode(SeabornTable.ENCODING)
+            value = value.decode(self.ENCODING)
         self._tab = value
 
     @property
@@ -593,7 +593,7 @@ class SeabornTable(object):
     @deliminator.setter
     def deliminator(self, value):
         if sys.version_info[0] == 2:
-            value = value.decode(SeabornTable.ENCODING)
+            value = value.decode(self.ENCODING)
         self._deliminator = value
 
     @property
@@ -705,7 +705,7 @@ class SeabornTable(object):
         :param kwargs: dict of column == value
         :return: SeabornTable
         """
-        ret = SeabornTable(
+        ret = self.__class__(
             columns=self.columns, row_columns=self.row_columns, tab=self.tab,
             key_on=self.key_on)
         for row in self:
@@ -720,7 +720,7 @@ class SeabornTable(object):
         :param value: obj of the value to test for
         :return: SeabornTable
         """
-        ret = SeabornTable(
+        ret = self.__class__(
             columns=self.columns, row_columns=self.row_columns, tab=self.tab,
             key_on=self.key_on)
         for row in self:
@@ -804,11 +804,16 @@ class SeabornTable(object):
 
     @classmethod
     def _get_lines(cls, file_path=None, text='', replace=None, split_lines=True):
-        if file_path is not None and os.path.exists(file_path):
+        if file_path is not None:
+            assert os.path.exists(file_path), \
+                "Missing file: %s"%file_path
             with open(file_path, 'rb') as f:
                 text = f.read()
         if sys.version_info[0] == 3 and isinstance(text, bytes):
-            text = text.decode(SeabornTable.ENCODING)
+            text = text.decode(cls.ENCODING)
+        elif sys.version_info[0] == 2 and isinstance(text, unicode):
+            text = text.decode(cls.ENCODING)
+
         if replace:
             text = text.replace(replace, '')
         if split_lines:
@@ -816,6 +821,7 @@ class SeabornTable(object):
                 text = text.split('\n')
             else:
                 text = text.split('\r\n')
+        assert text, 'Text is empty'
         return text
 
     def __str__(self):
@@ -841,12 +847,11 @@ class SeabornTable(object):
                 SeabornRow(column_index,
                            [row.get(c, None) for c in column_index]))
 
-        return SeabornTable(table=new_table,
-                            columns=self.columns)
+        return self.__class__(table=new_table, columns=self.columns)
 
     def __eq__(self, other):
         if not isinstance(other, SeabornTable):
-            other = SeabornTable(other)
+            other = self.__class__(other)
         return self.table.__eq__(other.table)
 
     def __ne__(self, other):
@@ -854,22 +859,22 @@ class SeabornTable(object):
 
     def __gt__(self, other):
         if not isinstance(other, SeabornTable):
-            other = SeabornTable(other)
+            other = self.__class__(other)
         return self.table.__gt__(other.table)
 
     def __lt__(self, other):
         if not isinstance(other, SeabornTable):
-            other = SeabornTable(other)
+            other = self.__class__(other)
         return self.table.__lt__(other.table)
 
     def __ge__(self, other):
         if not isinstance(other, SeabornTable):
-            other = SeabornTable(other)
+            other = self.__class__(other)
         return self.table.__ge__(other.table)
 
     def __le__(self, other):
         if not isinstance(other, SeabornTable):
-            other = SeabornTable(other)
+            other = self.__class__(other)
         return self.table.__le__(other.table)
 
     def __len__(self):
@@ -1060,8 +1065,8 @@ class SeabornTable(object):
             widths[-1] = 0
         return widths
 
-    @staticmethod
-    def _safe_str(cell, quote_numbers=True, repr_line_break=False):
+    @classmethod
+    def _safe_str(cls, cell, quote_numbers=True, repr_line_break=False):
         """
         :param cell: obj to turn in to a string
         :param quote_numbers: if True numbers will be quoted
@@ -1071,7 +1076,7 @@ class SeabornTable(object):
 
         ret = str(cell)
         if sys.version_info[0] == 2:
-            ret = ret.decode(SeabornTable.ENCODING)
+            ret = ret.decode(cls.ENCODING)
         if quote_numbers and isinstance(cell, BASESTRING):
             if (ret.replace('.', '').isdigit() or
                         u'"' in ret or ret in [u'False', u'True']):
@@ -1081,8 +1086,8 @@ class SeabornTable(object):
             ret = ret.replace(u'\n', u'\\n')
         return ret
 
-    @staticmethod
-    def _excel_cell(cell, quote_everything=False):
+    @classmethod
+    def _excel_cell(cls, cell, quote_everything=False):
         """
         This will return a text that excel interprets correctly when
         importing csv
@@ -1099,7 +1104,7 @@ class SeabornTable(object):
 
         ret = str(cell)
         if sys.version_info[0] == 2:
-            ret = ret.decode(SeabornTable.ENCODING)
+            ret = ret.decode(cls.ENCODING)
         if isinstance(cell, (int, float)) and not quote_everything:
             return ret
 
@@ -1146,8 +1151,8 @@ class SeabornTable(object):
         return OrderedDict(
             [(col, index) for index, col in enumerate(row_columns)])
 
-    @staticmethod
-    def _get_normalized_columns(list_):
+    @classmethod
+    def _get_normalized_columns(cls, list_):
         """
         :param list_: list of dict
         :return: list of string of every key in all the dictionaries
@@ -1155,7 +1160,7 @@ class SeabornTable(object):
         ret = []
         for row in list_:
             if len(row.keys()) > len(ret):
-                ret = SeabornTable._ordered_keys(row)
+                ret = cls._ordered_keys(row)
 
         for row in list_:
             for key in row.keys():
@@ -1230,17 +1235,17 @@ class SeabornTable(object):
                     else:
                         return
 
-    @staticmethod
-    def _save_file(file_path, text):
+    @classmethod
+    def _save_file(cls, file_path, text):
         if file_path is None:
             return
         if isinstance(text, UNICODE):
-            text = text.encode(SeabornTable.ENCODING)
+            text = text.encode(cls.ENCODING)
         with open(file_path, 'wb') as fp:
             fp.write(text)
 
-    @staticmethod
-    def _html_cell(cell):
+    @classmethod
+    def _html_cell(cls, cell):
         head = '<th'
         if isinstance(cell, HTMLRowRespan):
             if cell.count == 0:
@@ -1249,10 +1254,10 @@ class SeabornTable(object):
 
         if cell is None:
             return '%s/>' % head
-        if '\n' not in SeabornTable._safe_str(cell):
+        if '\n' not in cls._safe_str(cell):
             return '%s>%s</th>' % (head, cell)
         return '%s align="left">%s</th>' % (
-            head, SeabornTable._safe_str(cell).replace('\n', '<br>'))
+            head, cls._safe_str(cell).replace('\n', '<br>'))
 
     def _html_link_cells(self):
         """
@@ -1321,10 +1326,10 @@ class SeabornTable(object):
 
         values_width = [len(name)]
         if isinstance(self._parameters.get(name, None), list):
-            values_width += [len(SeabornTable._safe_str(p, **kwargs))
+            values_width += [len(self._safe_str(p, **kwargs))
                              for p in self._parameters[name]]
 
-        values_width += [len(SeabornTable._safe_str(row[index], **kwargs))
+        values_width += [len(self._safe_str(row[index], **kwargs))
                          for row in self.table]
 
         ret = max(values_width)
