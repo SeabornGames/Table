@@ -26,6 +26,16 @@ class SeabornTable(object):
     DEFAULT_DELIMINATOR = u'\t'
     DEFAULT_TAB = u''
     ENCODING = 'utf-8'
+    FANCY = {'top edge': '-',               'top intersect': '-',
+             'top right corner': '+',       'top left corner': '+',
+             'left edge': '¦',              'left intersect': '+',
+             'left major intersect': '¦',
+             'right edge': '¦',             'right intersect': '¦',
+             'right major intersect': '¦',
+             'bottom edge': '-',            'bottom intersect': '-',
+             'bottom right corner': '+',    'bottom left instersect': '+',
+             'internal vertical edge': '¦', 'internal horizontal edge': '-', 
+             'internal intersect': '+',     'internal major intersect': '+'}
 
     def __init__(self, table=None, columns=None, row_columns=None, tab=None,
                  key_on=None, deliminator=None):
@@ -70,7 +80,7 @@ class SeabornTable(object):
             self._column_index, self.table = temp._column_index, temp.table
             self._row_columns = list(self._column_index.keys())
         elif getattr(table, 'headings', None) is not None and \
-                        getattr(table, 'row_columns', None) is not None:
+                getattr(table, 'row_columns', None) is not None:
             self.row_columns = row_columns or columns or table.headings
             self.table = [SeabornRow(self._column_index,
                                      [row[c] for c in self.row_columns])
@@ -251,9 +261,52 @@ class SeabornTable(object):
                                row_columns=row_columns, key_on=key_on)
 
     @classmethod
+    def grid_to_obj(cls, file_path=None, text='', delim={},
+                    columns=None, key_on=None):
+        """
+        This will convert a grid file or grid text into a seaborn table
+        and return it
+        :param file_path: str of the path to the file
+        :param text: str of the grid text
+        :param columns: list of str of columns to use
+        :param key_on: list of str of columns to key on
+        :return: SeabornTable
+        """
+
+        for tag in cls.FANCY.keys():
+            delim[tag] = delim[tag] if tag in delim.keys() \
+                else cls.FANCY[tag]
+
+        if file_path is not None and os.path.exists(file_path):
+            with open(file_path, 'rb') as f:
+                text = f.read()
+        if sys.version_info[0] == 3 and isinstance(text, bytes):
+            text = text.decode(SeabornTable.ENCODING)
+        text = text.replace('\xef\xbb\xbf', '')
+        if text.find('\r\n') == -1:
+            lines = text.split('\n')
+        else:
+            lines = text.split('\r\n')
+        data=[]
+        for i in range(len(lines)):
+            if i % 2 == 1:
+                data += [lines[i][1:-1].strip().split(
+                    delim['internal vertical edge'])]
+        row_columns = data[0]
+        if len(row_columns) != len(set(row_columns)): # make unique
+            for i, col in enumerate(row_columns):
+                count = row_columns[:i].count(col)
+                row_columns[i] = '%s_%s'%(col, count) if count else col
+        return cls.list_to_obj(data[1:], columns=columns,
+                               row_columns=row_columns, key_on=key_on)
+
+
+    @classmethod
     def file_to_obj(cls, file_path, columns=None):
         if file_path.endswith('.txt'):
             return cls.str_to_obj(file_path=file_path, columns=columns)
+        elif file_path.endswith('.grid'):
+            return cls.grid_to_obj(file_path=file_path, columns=columns)
         elif file_path.endswith('.md'):
             return cls.mark_down_to_obj(file_path=file_path, columns=columns)
         elif file_path.endswith('.csv'):
@@ -424,6 +477,64 @@ class SeabornTable(object):
         self._save_file(file_path, ret)
         return ret
 
+    def obj_to_grid(self, file_path=None, delim={}, tab=None):
+        """
+        
+        :param file_path:   path to data file, defaults to 
+                            self's contents if left alone
+        :param deliminator: dict of deliminators, defaults to 
+                            obj_to_str's method:
+
+        :param tab:     string of offset of the table
+        :return:        string representing the grid formation
+                        of the relevant data
+        """
+
+        div_delims = {"top": ['top left corner', 'top intersect',
+                              'top edge', 'top right corner'],
+                      "divide": ['left major intersect',
+                                 'internal major intersect',
+                                 'bottom edge', 'right major intersect'],
+                      "middle": ['left intersect', 'internal intersect',
+                                 'internal horizontal edge', 'right intersect'],
+                      "bottom": ['bottom left instersect', 'bottom intersect',
+                                 'bottom edge', 'bottom right corner']}
+
+        for tag in self.FANCY.keys():
+            delim[tag] = delim[tag] if tag in delim.keys() \
+                else self.FANCY[tag]
+
+        tab = self.tab if tab is None else tab
+
+        list_of_list = [[self._safe_str(cell, quote_numbers=False)
+                         for cell in row] for row in self]
+        list_of_list = [self.columns] + list_of_list
+
+        column_widths = self._get_column_widths(list_of_list,
+                                                padding=0, pad_last_column=True)
+        ret = [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
+               for row in list_of_list]
+        grid_row={}
+
+        for key in div_delims.keys():
+            draw = div_delims[key]
+            grid_row[key] = delim[draw[0]]
+            grid_row[key] += delim[draw[1]].join(
+                [delim[draw[2]] * width
+                 for width in column_widths])
+            grid_row[key] += delim[draw[3]]
+
+        ret = [delim['left edge']+delim['internal vertical edge'].join(row)+
+               delim['right edge'] for row in ret]
+        header = [grid_row["top"], ret[0], grid_row["divide"]]
+        body = [[row, grid_row["middle"]] for row in ret[1:]]
+        body = [item for pair in body for item in pair][:-1]
+        ret = header + body + [grid_row["bottom"]]
+        ret = tab + (u'\n'+tab).join(ret)
+        self._save_file(file_path, ret)
+        return ret
+
+
     def obj_to_csv(self, quote_everything=False, space_columns=True,
                    file_path=None):
         """
@@ -500,7 +611,7 @@ class SeabornTable(object):
         elif file_path.endswith('md'):
             self.obj_to_mark_down(file_path=file_path, title_columns=False)
         else:
-            raise 'Unknown file type: %s' % file_path
+            raise Exception('Unknown file type: %s' % file_path)
 
     @property
     def tab(self):
@@ -797,7 +908,7 @@ class SeabornTable(object):
                     return True
             return False
         elif (isinstance(value, SeabornRow) and
-                      getattr(value, 'column_index') == self._column_index):
+              getattr(value, 'column_index') == self._column_index):
             return value in self.table
         elif isinstance(value, SeabornRow):
             value = [value[k] for k in self.row_columns]

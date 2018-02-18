@@ -1,3 +1,9 @@
+Changes in 1.3.2
+================
+
+* Added fancy grid option
+
+
 Changes in 1.3.1
 ================
 
