@@ -212,19 +212,8 @@ class SeabornTable(object):
         :param key_on: list of str of columns to key on
         :return: SeabornTable
         """
-        if file_path is not None and os.path.exists(file_path):
-            with open(file_path, 'rb') as f:
-                text = f.read()
-        if sys.version_info[0] == 3 and isinstance(text, bytes):
-            text = text.decode(SeabornTable.ENCODING)
+        lines = cls._get_lines(file_path, text, replace='\xef\xbb\xbf')
         data = []
-        # text = text.replace('\xdf', 'B')
-        text = text.replace('\xef\xbb\xbf', '')
-        if text.find('\r\n') == -1:
-            lines = text.split('\n')
-        else:
-            lines = text.split('\r\n')
-
         for i in range(len(lines)):
             lines[i] = lines[i].replace('\r', '\n')
             lines[i] = lines[i].replace('\\r', '\r').split(',')
@@ -273,17 +262,7 @@ class SeabornTable(object):
         :return: SeabornTable
         """
         delim = delim if delim else cls.FANCY
-
-        if file_path is not None and os.path.exists(file_path):
-            with open(file_path, 'rb') as f:
-                text = f.read()
-        if sys.version_info[0] == 3 and isinstance(text, bytes):
-            text = text.decode(SeabornTable.ENCODING)
-        text = text.replace('\xef\xbb\xbf', '')
-        if text.find('\r\n') == -1:
-            lines = text.split('\n')
-        else:
-            lines = text.split('\r\n')
+        lines = cls._get_lines(file_path, text)
         data=[]
         for i in range(len(lines)):
             if i % 2 == 1:
@@ -360,12 +339,7 @@ class SeabornTable(object):
         :param key_on: list of str of columns to key on
         :return: OrderedDict of {<header>: SeabornTable}
         """
-        if file_path is not None and os.path.exists(file_path):
-            with open(file_path, 'rb') as f:
-                text = f.read()
-
-        if sys.version_info[0] == 3 and isinstance(text, bytes):
-            text = text.decode(SeabornTable.ENCODING)
+        text = cls._get_lines(file_path, text, split_lines=False)
         ret = OrderedDict()
         paragraphs = text.split('####')
         for paragraph in paragraphs[1:]:
@@ -389,12 +363,7 @@ class SeabornTable(object):
             any lines between ```
         :return: SeabornTable
         """
-        if file_path is not None and os.path.exists(file_path):
-            with open(file_path, 'rb') as f:
-                text = f.read()
-        if sys.version_info[0] == 3 and isinstance(text, bytes):
-            text = text.decode(SeabornTable.ENCODING)
-        text = text.replace('\r\n', '\n').replace('\r', '\n').strip()
+        text = cls._get_lines(file_path, text, split_lines=False)
 
         if ignore_code_blocks:
             text = text.split("```")
@@ -473,14 +442,12 @@ class SeabornTable(object):
         self._save_file(file_path, ret)
         return ret
 
-    def obj_to_grid(self, file_path=None, delim={}, tab=None):
+    def obj_to_grid(self, file_path=None, delim=None, tab=None):
         """
-        
-        :param file_path:   path to data file, defaults to 
+        :param file_path: path to data file, defaults to
                             self's contents if left alone
-        :param deliminator: dict of deliminators, defaults to 
+        :param delim:     dict of deliminators, defaults to
                             obj_to_str's method:
-
         :param tab:     string of offset of the table
         :return:        string representing the grid formation
                         of the relevant data
@@ -495,7 +462,7 @@ class SeabornTable(object):
                                  'internal horizontal edge', 'right intersect'],
                       "bottom": ['bottom left instersect', 'bottom intersect',
                                  'bottom edge', 'bottom right corner']}
-
+        delim = delim if delim else {}
         for tag in self.FANCY.keys():
             delim[tag] = delim[tag] if tag in delim.keys() \
                 else self.FANCY[tag]
@@ -833,6 +800,23 @@ class SeabornTable(object):
             if hasattr(self._parameters.get(c, ''), '__call__'):
                 # noinspection PyTypeChecker
                 self.set_column(c, self._parameters[c])
+
+
+    @classmethod
+    def _get_lines(cls, file_path=None, text='', replace=None, split_lines=True):
+        if file_path is not None and os.path.exists(file_path):
+            with open(file_path, 'rb') as f:
+                text = f.read()
+        if sys.version_info[0] == 3 and isinstance(text, bytes):
+            text = text.decode(SeabornTable.ENCODING)
+        if replace:
+            text = text.replace(replace, '')
+        if split_lines:
+            if text.find('\r\n') == -1:
+                text = text.split('\n')
+            else:
+                text = text.split('\r\n')
+        return text
 
     def __str__(self):
         ret = self.obj_to_str()
