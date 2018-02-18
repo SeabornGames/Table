@@ -23,7 +23,7 @@ class FileConversionTest(unittest.TestCase):
 
     def cmp_file(self, source, ext):
         self.assertTrue(os.path.exists(file(source, ext)),
-                        'File not created: %s' % file(source, ext))
+                        'File not created: %s'%file(source, ext))
         with open(file('data', ext), 'rb') as fp:
             expected = fp.read().decode('utf-8').replace('\r', '').split('\n')
 

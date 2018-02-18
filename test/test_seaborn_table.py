@@ -3,6 +3,7 @@ import os
 import sys
 import unittest
 
+
 from seaborn.seaborn_table import SeabornTable
 
 log = logging.getLogger(__file__)
@@ -60,7 +61,7 @@ class ExampleTableTest(unittest.TestCase):
                 '#': lambda _row_index, **kwargs: _row_index},
             filter_func=row_filter,
             deliminator=' | ',
-            tab='| ',
+            tab = '| ',
             max_size=100)
         self.assertEqual(self.answer, str(table))
         return table
@@ -116,7 +117,7 @@ class ExampleTableTest(unittest.TestCase):
         for i, row in enumerate(self.list_of_list[1:]):
             dict_of_dict[i] = {k: row[i] for i, k in enumerate(columns)}
         table = SeabornTable(dict_of_dict, columns, deliminator=' | ',
-                             tab='| ')
+                             tab = '| ')
         log.debug('\nAnswer:\n%s\n\nResult:\n%s\n\n' % (
             self.answer, str(table)))
         self.assertEqual(self.answer, str(table))
@@ -127,7 +128,7 @@ class ExampleTableTest(unittest.TestCase):
         for i, k in enumerate(columns):
             dict_of_list[k] = [row[i] for row in self.list_of_list[1:]]
         table = SeabornTable(dict_of_list, columns, deliminator=' | ',
-                             tab='| ')
+                             tab = '| ')
         log.debug('\nAnswer:\n%s\n\nResult:\n%s\n\n' % (
             self.answer, str(table)))
         self.assertEqual(self.answer, str(table))
@@ -184,6 +185,14 @@ class ExampleTableTest(unittest.TestCase):
         self.assertEqual(text, testing,
                          "Values don't match:\n%s\n%s" % (
                              repr(testing), repr(text)))
+
+    def test_fancy(self):
+        expected = SeabornTable.grid_to_obj(os.path.join(
+            PATH,'data','test.grid'))
+        result = SeabornTable.mark_down_to_obj(
+            os.path.join(PATH, 'data', 'test_file.md'))
+
+        self.assertEqual(expected.obj_to_grid(), result.obj_to_grid())
 
 
 if __name__ == '__main__':
