@@ -26,16 +26,30 @@ class SeabornTable(object):
     DEFAULT_DELIMINATOR = u'\t'
     DEFAULT_TAB = u''
     ENCODING = 'utf-8'
-    FANCY = {'top edge': '-',               'top intersect': '-',
-             'top right corner': '+',       'top left corner': '+',
-             'left edge': '�',              'left intersect': '+',
-             'left major intersect': '�',
-             'right edge': '�',             'right intersect': '�',
-             'right major intersect': '�',
-             'bottom edge': '-',            'bottom intersect': '-',
-             'bottom right corner': '+',    'bottom left instersect': '+',
-             'internal vertical edge': '�', 'internal horizontal edge': '-', 
-             'internal intersect': '+',     'internal major intersect': '+'}
+    FANCY = {
+        'top edge': u'-',
+        'top intersect': u'-',
+        'top left corner': u'+',
+        'top right corner': u'+',
+
+        'internal horizontal edge': u'-',
+        'internal major intersect': u'+',
+        'internal vertical edge': u'│',
+        'internal intersect': u'+',
+
+        'left major intersect': u'\ufffd',
+        'left edge': u'\ufffd',
+        'left intersect': u'+',
+
+        'right intersect': u'\ufffd',
+        'right major intersect': u'\ufffd',
+        'right edge': u'\ufffd',
+
+        'bottom right corner': u'+',
+        'bottom left intersect': u'+',
+        'bottom intersect': u'-',
+        'bottom edge': u'-',
+    }
 
     def __init__(self, table=None, columns=None, row_columns=None, tab=None,
                  key_on=None, deliminator=None):
@@ -266,8 +280,8 @@ class SeabornTable(object):
         data=[]
         for i in range(len(lines)):
             if i % 2 == 1:
-                data += [lines[i][1:-1].strip().split(
-                    delim['internal vertical edge'])]
+                data.append(lines[i].split(
+                    delim['internal vertical edge'])[1:-1])
         row_columns = data[0]
         if len(row_columns) != len(set(row_columns)): # make unique
             for i, col in enumerate(row_columns):
@@ -460,7 +474,7 @@ class SeabornTable(object):
                                  'bottom edge', 'right major intersect'],
                       "middle": ['left intersect', 'internal intersect',
                                  'internal horizontal edge', 'right intersect'],
-                      "bottom": ['bottom left instersect', 'bottom intersect',
+                      "bottom": ['bottom left intersect', 'bottom intersect',
                                  'bottom edge', 'bottom right corner']}
         delim = delim if delim else {}
         for tag in self.FANCY.keys():
@@ -809,18 +823,17 @@ class SeabornTable(object):
                 "Missing file: %s"%file_path
             with open(file_path, 'rb') as f:
                 text = f.read()
-        if sys.version_info[0] == 3 and isinstance(text, bytes):
-            text = text.decode(cls.ENCODING)
-        elif sys.version_info[0] == 2 and isinstance(text, unicode):
+        if (sys.version_info[0] == 3 and isinstance(text, bytes) or
+            sys.version_info[0] == 2):
             text = text.decode(cls.ENCODING)
 
         if replace:
             text = text.replace(replace, '')
         if split_lines:
-            if text.find('\r\n') == -1:
-                text = text.split('\n')
+            if text.find(b'\r\n') == -1:
+                text = text.split(b'\n')
             else:
-                text = text.split('\r\n')
+                text = text.split(b'\r\n')
         assert text, 'Text is empty'
         return text
 
@@ -1053,8 +1066,11 @@ class SeabornTable(object):
         def _len(text):
             if len(text) > 15:
                 pass
-            if u'\n' in text:
-                return len(text.split(u'\n', 1)[0])
+            if sys.version[0] == 2 and isinstance(text, unicode):
+                if u'\n' in text:
+                    return len(text.split(u'\n', 1)[0])
+            elif '\n' in text:
+                return len(text.split('\n', 1)[0])
             return len(text)
 
         widths = []
@@ -1074,11 +1090,9 @@ class SeabornTable(object):
         if cell is None:
             return ''
 
-        ret = str(cell)
-        if sys.version_info[0] == 2:
-            ret = ret.decode(cls.ENCODING)
-        if quote_numbers and isinstance(cell, BASESTRING):
-            if (ret.replace('.', '').isdigit() or
+        ret = str(cell) if not isinstance(cell, BASESTRING) else cell
+        if quote_numbers: #  and isinstance(cell, BASESTRING):
+            if (ret.replace(u'.', u'').isdigit() or
                         u'"' in ret or ret in [u'False', u'True']):
                 ret = u'"%s"' % ret
 
