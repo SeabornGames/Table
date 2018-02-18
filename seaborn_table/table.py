@@ -27,28 +27,28 @@ class SeabornTable(object):
     DEFAULT_TAB = u''
     ENCODING = 'utf-8'
     FANCY = {
-        'top edge': u'-',
-        'top intersect': u'-',
-        'top left corner': u'+',
-        'top right corner': u'+',
+        'top edge': u'═',
+        'top intersect': u'╤',
+        'top left corner': u'╒',
+        'top right corner': u'╕',
 
-        'internal horizontal edge': u'-',
-        'internal major intersect': u'+',
+        'internal horizontal edge': u'─',
+        'internal intersect': u'┼',
+        'internal major intersect': u'╪',
         'internal vertical edge': u'│',
-        'internal intersect': u'+',
 
-        'left major intersect': u'\ufffd',
-        'left edge': u'\ufffd',
-        'left intersect': u'+',
+        'left major intersect': u'╞',
+        'left intersect': u'├',
+        'left edge': u'│',
 
-        'right intersect': u'\ufffd',
-        'right major intersect': u'\ufffd',
-        'right edge': u'\ufffd',
+        'right major intersect': u'╡',
+        'right intersect': u'┤',
+        'right edge': u'│',
 
-        'bottom right corner': u'+',
-        'bottom left intersect': u'+',
-        'bottom intersect': u'-',
-        'bottom edge': u'-',
+        'bottom edge': u'═',
+        'bottom intersect': u'╧',
+        'bottom left intersect': u'╘',
+        'bottom right corner': u'╛',
     }
 
     def __init__(self, table=None, columns=None, row_columns=None, tab=None,
@@ -300,6 +300,8 @@ class SeabornTable(object):
             return cls.mark_down_to_obj(file_path=file_path, columns=columns)
         elif file_path.endswith('.csv'):
             return cls.csv_to_obj(file_path=file_path, columns=columns)
+        elif file_path.endswith('.grid'):
+            return cls.grid_to_obj(file_path=file_path, columns=columns)
         else:
             raise 'Unknown file type: %s' % file_path
 
@@ -587,6 +589,8 @@ class SeabornTable(object):
             self.obj_to_html(file_path=file_path)
         elif file_path.endswith('md'):
             self.obj_to_mark_down(file_path=file_path, title_columns=False)
+        elif file_path.endswith('grid'):
+            self.obj_to_grid(file_path=file_path)
         else:
             raise Exception('Unknown file type: %s' % file_path)
 
@@ -1091,7 +1095,7 @@ class SeabornTable(object):
             return ''
 
         ret = str(cell) if not isinstance(cell, BASESTRING) else cell
-        if quote_numbers: #  and isinstance(cell, BASESTRING):
+        if quote_numbers and isinstance(cell, BASESTRING):
             if (ret.replace(u'.', u'').isdigit() or
                         u'"' in ret or ret in [u'False', u'True']):
                 ret = u'"%s"' % ret
@@ -1116,9 +1120,7 @@ class SeabornTable(object):
         if cell is False:
             return u'FALSE'
 
-        ret = str(cell)
-        if sys.version_info[0] == 2:
-            ret = ret.decode(cls.ENCODING)
+        ret = cell if isinstance(cell, BASESTRING) else UNICODE(cell)
         if isinstance(cell, (int, float)) and not quote_everything:
             return ret
 
