@@ -14,7 +14,6 @@ setup(
     author_email='Python@BenChristenson.com',
     url='https://github.com/SeabornGames/SeabornTable',
     install_requires=[
-        'seaborn-hack',
     ],
     extras_require={
     },

@@ -3,8 +3,6 @@ Changes in 1.3.1
 
 * Reorganized code to table.table structure
 
-* Added seaborn-hack requirement
-
 
 Changes in 1.3.0
 ================
