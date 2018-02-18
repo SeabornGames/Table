@@ -280,8 +280,8 @@ class SeabornTable(object):
         data=[]
         for i in range(len(lines)):
             if i % 2 == 1:
-                data.append(lines[i].split(
-                    delim['internal vertical edge'])[1:-1])
+                row = lines[i].split(delim['internal vertical edge'])[1:-1]
+                data.append([cls._eval_cell(r) for r in row])
         row_columns = data[0]
         if len(row_columns) != len(set(row_columns)): # make unique
             for i, col in enumerate(row_columns):
@@ -322,20 +322,14 @@ class SeabornTable(object):
         :param eval_cells: bool if True will try to evaluate numbers
         :return: SeabornTable
         """
-        if file_path and os.path.exists(file_path):
-            with open(file_path, 'rb') as f:
-                text = f.read()
-        if sys.version_info[0] == 3 and isinstance(text, bytes):
-            text = text.decode(cls.ENCODING)
-        text = text.strip().split('\n')
+        text = cls._get_lines(file_path, text)
         if len(text) == 1:
             text = text[0].split('\r')
 
         eval_cell = cls._eval_cell if eval_cells else lambda x: x
         list_of_list = [[eval_cell(cell) for cell in row.split(deliminator)]
-                        for row in text if
-                        not remove_empty_rows or True in [bool(r) for r in
-                                                          row]]
+                        for row in text if not remove_empty_rows or
+                        True in [bool(r) for r in row]]
 
         if list_of_list[0][0] == '' and list_of_list[0][-1] == '':
             list_of_list = [row[1:-1] for row in list_of_list]
