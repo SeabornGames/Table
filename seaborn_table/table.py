@@ -226,8 +226,8 @@ class SeabornTable(object):
         :param key_on: list of str of columns to key on
         :return: SeabornTable
         """
-        lines = cls._get_lines(file_path, text, replace='\xef\xbb\xbf')
         data = []
+        lines = cls._get_lines(file_path, text, replace=u'\ufeff')
         for i in range(len(lines)):
             lines[i] = lines[i].replace('\r', '\n')
             lines[i] = lines[i].replace('\\r', '\r').split(',')
@@ -828,7 +828,7 @@ class SeabornTable(object):
             text = text.decode(cls.ENCODING)
 
         if replace:
-            text = text.replace(replace, '')
+            text = text.replace(replace, b'')
         if split_lines:
             if text.find(b'\r\n') == -1:
                 text = text.split(b'\n')
