@@ -2,7 +2,7 @@ import os
 import shutil
 import unittest
 
-from seaborn.table.table import main as cli_converter
+from seaborn_table.table import main as cli_converter
 
 PATH = os.path.split(os.path.abspath(__file__))[0]
 

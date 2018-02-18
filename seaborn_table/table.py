@@ -28,13 +28,13 @@ class SeabornTable(object):
     ENCODING = 'utf-8'
     FANCY = {'top edge': '-',               'top intersect': '-',
              'top right corner': '+',       'top left corner': '+',
-             'left edge': '¦',              'left intersect': '+',
-             'left major intersect': '¦',
-             'right edge': '¦',             'right intersect': '¦',
-             'right major intersect': '¦',
+             'left edge': 'ï¿½',              'left intersect': '+',
+             'left major intersect': 'ï¿½',
+             'right edge': 'ï¿½',             'right intersect': 'ï¿½',
+             'right major intersect': 'ï¿½',
              'bottom edge': '-',            'bottom intersect': '-',
              'bottom right corner': '+',    'bottom left instersect': '+',
-             'internal vertical edge': '¦', 'internal horizontal edge': '-', 
+             'internal vertical edge': 'ï¿½', 'internal horizontal edge': '-', 
              'internal intersect': '+',     'internal major intersect': '+'}
 
     def __init__(self, table=None, columns=None, row_columns=None, tab=None,
@@ -261,7 +261,7 @@ class SeabornTable(object):
                                row_columns=row_columns, key_on=key_on)
 
     @classmethod
-    def grid_to_obj(cls, file_path=None, text='', delim={},
+    def grid_to_obj(cls, file_path=None, text='', delim=None,
                     columns=None, key_on=None):
         """
         This will convert a grid file or grid text into a seaborn table
@@ -272,10 +272,7 @@ class SeabornTable(object):
         :param key_on: list of str of columns to key on
         :return: SeabornTable
         """
-
-        for tag in cls.FANCY.keys():
-            delim[tag] = delim[tag] if tag in delim.keys() \
-                else cls.FANCY[tag]
+        delim = delim if delim else cls.FANCY
 
         if file_path is not None and os.path.exists(file_path):
             with open(file_path, 'rb') as f:
@@ -299,7 +296,6 @@ class SeabornTable(object):
                 row_columns[i] = '%s_%s'%(col, count) if count else col
         return cls.list_to_obj(data[1:], columns=columns,
                                row_columns=row_columns, key_on=key_on)
-
 
     @classmethod
     def file_to_obj(cls, file_path, columns=None):

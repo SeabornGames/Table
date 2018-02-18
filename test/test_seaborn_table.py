@@ -4,7 +4,7 @@ import sys
 import unittest
 
 
-from seaborn.seaborn_table import SeabornTable
+from seaborn_table.table import SeabornTable
 
 log = logging.getLogger(__file__)
 

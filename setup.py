@@ -17,7 +17,7 @@ setup(
     ],
     extras_require={
     },
-    packages=['seaborn.table', 'seaborn'],
+    packages=['seaborn_table', 'seaborn'],
     license='MIT License',
     classifiers=(
         'Intended Audience :: Developers',
