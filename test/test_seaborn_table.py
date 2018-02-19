@@ -70,20 +70,20 @@ class ExampleTableTest(unittest.TestCase):
         table = self.test_pertibate()
         table.deliminator = ' | '
         table.tab = '| '
-        table.sort_by_key(['column 1', 'column 3'])
+        table.sort_by_key(['column 1', '-column 3'])
         answer = """
             | #  | column 1 | col2  | column 3 | output column  | output col2
-            | 0  | 1        | Hello | a        |                | 1
-            | 2  | 1        | World | a        |                | 1
-            | 5  | 1        | World | b        |                | 1
             | 7  | 1        | Hello | c        |                | 1
             | 9  | 1        | World | c        |                | 1
-            | 1  | 2        | Hello | a        |                | 2
-            | 3  | 2        | World | a        |                | 2
-            | 4  | 2        | Hello | b        |                | 2
-            | 6  | 2        | World | b        |                | 2
+            | 5  | 1        | World | b        |                | 1
+            | 0  | 1        | Hello | a        |                | 1
+            | 2  | 1        | World | a        |                | 1
             | 8  | 2        | Hello | c        |                | 2
             | 10 | 2        | World | c        |                | 2
+            | 4  | 2        | Hello | b        |                | 2
+            | 6  | 2        | World | b        |                | 2
+            | 1  | 2        | Hello | a        |                | 2
+            | 3  | 2        | World | a        |                | 2
         """.strip().replace('\n            ', '\n')
         log.debug(str(table))
         self.assertEqual(str(table), answer)

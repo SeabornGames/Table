@@ -1050,10 +1050,9 @@ class SeabornTable(object):
         """
         keys = keys or self.key_on
         keys = keys if isinstance(keys, (list, tuple)) else [keys]
-        if sys.version_info[0] == 2:
-            self.table.sort(ByKey(keys))
-        else:
-            self.table.sort(key=ByKey(keys))
+        for key in reversed(keys):
+            reverse, key = (True, key[1:]) if key[0] == '-' else (False, key)
+            self.table.sort(key=lambda row: row[key], reverse=reverse)
 
     def reverse(self):
         self.table.reverse()
@@ -1431,40 +1430,6 @@ class HTMLRowRespan(object):
 
     def __cmp__(self, other):
         return self.value != other
-
-
-class ByKey(object):
-    def __init__(self, keys, comp=None):
-        self.keys = isinstance(keys, list) and keys or [keys]
-        self.comp = comp or (lambda x: x)
-        if sys.version_info[0] == 2:
-            self.call = self.call2
-
-    def __call__(self, *args):
-        return self.call(*args)
-
-    def call2(self, obj1, obj2):
-        for key in self.keys:
-            low_to_high = 1
-            if key[0] == '-':
-                low_to_high = -1
-                key = key[1:]
-
-            if obj1[key] > obj2[key]:
-                return low_to_high
-            if obj1[key] < obj2[key]:
-                return 0 - low_to_high
-        return 0
-
-    def call(self, obj):
-        ret = []
-        for key in self.keys:
-            low_to_high = 1
-            if key[0] == '-':
-                low_to_high = -1
-                key = key[1:]
-            ret.append(self.comp(obj[key]) * low_to_high)
-        return ret
 
 
 BASESTRING = basestring if sys.version_info[0] == 2 else str
