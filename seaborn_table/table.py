@@ -826,12 +826,12 @@ class SeabornTable(object):
             text = text.decode(cls.ENCODING)
 
         if replace:
-            text = text.replace(replace, b'')
+            text = text.replace(replace, u'')
         if split_lines:
-            if text.find(b'\r\n') == -1:
-                text = text.split(b'\n')
+            if text.find(u'\r\n') == -1:
+                text = text.split(u'\n')
             else:
-                text = text.split(b'\r\n')
+                text = text.split(u'\r\n')
         assert text, 'Text is empty'
         return text
 
