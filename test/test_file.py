@@ -19,7 +19,7 @@ class FileConversionTest(unittest.TestCase):
         source_file = os.path.join(PATH, 'data', 'test_file.%s' % source)
         cli_converter(source_file, file(source, dest))
         self.cmp_file(source, dest)
-        # shutil.rmtree(result_folder)
+        shutil.rmtree(result_folder)
 
     def cmp_file(self, source, ext):
         self.assertTrue(os.path.exists(file(source, ext)),
