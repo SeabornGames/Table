@@ -6,7 +6,7 @@ with open(os.path.join(os.path.dirname(__file__), 'README.md')) as f:
 
 setup(
     name='seaborn-table',
-    version='1.3.1',
+    version='1.3.2',
     description='SeabornTable reads and writes tables in '
                 'csv and md and acts like a list and dict."',
     long_description=long_description,
@@ -17,7 +17,7 @@ setup(
     ],
     extras_require={
     },
-    packages=['seaborn.table', 'seaborn'],
+    packages=['seaborn_table', 'seaborn'],
     license='MIT License',
     classifiers=(
         'Intended Audience :: Developers',

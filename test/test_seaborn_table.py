@@ -3,7 +3,8 @@ import os
 import sys
 import unittest
 
-from seaborn.seaborn_table import SeabornTable
+
+from seaborn_table.table import SeabornTable
 
 log = logging.getLogger(__file__)
 
@@ -60,7 +61,7 @@ class ExampleTableTest(unittest.TestCase):
                 '#': lambda _row_index, **kwargs: _row_index},
             filter_func=row_filter,
             deliminator=' | ',
-            tab='| ',
+            tab = '| ',
             max_size=100)
         self.assertEqual(self.answer, str(table))
         return table
@@ -69,20 +70,20 @@ class ExampleTableTest(unittest.TestCase):
         table = self.test_pertibate()
         table.deliminator = ' | '
         table.tab = '| '
-        table.sort_by_key(['column 1', 'column 3'])
+        table.sort_by_key(['column 1', '-column 3'])
         answer = """
             | #  | column 1 | col2  | column 3 | output column  | output col2
-            | 0  | 1        | Hello | a        |                | 1
-            | 2  | 1        | World | a        |                | 1
-            | 5  | 1        | World | b        |                | 1
             | 7  | 1        | Hello | c        |                | 1
             | 9  | 1        | World | c        |                | 1
-            | 1  | 2        | Hello | a        |                | 2
-            | 3  | 2        | World | a        |                | 2
-            | 4  | 2        | Hello | b        |                | 2
-            | 6  | 2        | World | b        |                | 2
+            | 5  | 1        | World | b        |                | 1
+            | 0  | 1        | Hello | a        |                | 1
+            | 2  | 1        | World | a        |                | 1
             | 8  | 2        | Hello | c        |                | 2
             | 10 | 2        | World | c        |                | 2
+            | 4  | 2        | Hello | b        |                | 2
+            | 6  | 2        | World | b        |                | 2
+            | 1  | 2        | Hello | a        |                | 2
+            | 3  | 2        | World | a        |                | 2
         """.strip().replace('\n            ', '\n')
         log.debug(str(table))
         self.assertEqual(str(table), answer)
@@ -116,7 +117,7 @@ class ExampleTableTest(unittest.TestCase):
         for i, row in enumerate(self.list_of_list[1:]):
             dict_of_dict[i] = {k: row[i] for i, k in enumerate(columns)}
         table = SeabornTable(dict_of_dict, columns, deliminator=' | ',
-                             tab='| ')
+                             tab = '| ')
         log.debug('\nAnswer:\n%s\n\nResult:\n%s\n\n' % (
             self.answer, str(table)))
         self.assertEqual(self.answer, str(table))
@@ -127,7 +128,7 @@ class ExampleTableTest(unittest.TestCase):
         for i, k in enumerate(columns):
             dict_of_list[k] = [row[i] for row in self.list_of_list[1:]]
         table = SeabornTable(dict_of_list, columns, deliminator=' | ',
-                             tab='| ')
+                             tab = '| ')
         log.debug('\nAnswer:\n%s\n\nResult:\n%s\n\n' % (
             self.answer, str(table)))
         self.assertEqual(self.answer, str(table))
@@ -184,6 +185,15 @@ class ExampleTableTest(unittest.TestCase):
         self.assertEqual(text, testing,
                          "Values don't match:\n%s\n%s" % (
                              repr(testing), repr(text)))
+
+    def test_fancy(self):
+        expected = SeabornTable.grid_to_obj(os.path.join(
+            PATH,'data','test_file.grid'))
+        print(str(expected))
+        result = SeabornTable.mark_down_to_obj(
+            os.path.join(PATH, 'data', 'test_file.md'))
+
+        self.assertEqual(expected.obj_to_grid(), result.obj_to_grid())
 
 
 if __name__ == '__main__':

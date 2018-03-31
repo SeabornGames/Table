@@ -26,6 +26,30 @@ class SeabornTable(object):
     DEFAULT_DELIMINATOR = u'\t'
     DEFAULT_TAB = u''
     ENCODING = 'utf-8'
+    FANCY = {
+        'top edge': u'═',
+        'top intersect': u'╤',
+        'top left corner': u'╒',
+        'top right corner': u'╕',
+
+        'internal horizontal edge': u'─',
+        'internal intersect': u'┼',
+        'internal major intersect': u'╪',
+        'internal vertical edge': u'│',
+
+        'left major intersect': u'╞',
+        'left intersect': u'├',
+        'left edge': u'│',
+
+        'right major intersect': u'╡',
+        'right intersect': u'┤',
+        'right edge': u'│',
+
+        'bottom edge': u'═',
+        'bottom intersect': u'╧',
+        'bottom left intersect': u'╘',
+        'bottom right corner': u'╛',
+    }
 
     def __init__(self, table=None, columns=None, row_columns=None, tab=None,
                  key_on=None, deliminator=None):
@@ -60,17 +84,17 @@ class SeabornTable(object):
             self._row_columns = list(table[0].column_index.keys())
             self.table = table
         elif isinstance(table, dict):
-            temp = SeabornTable.dict_to_obj(table, columns, row_columns,
+            temp = self.dict_to_obj(table, columns, row_columns,
                                             key_on=key_on)
             self._column_index, self.table = temp._column_index, temp.table
             self._row_columns = list(self._column_index.keys())
         elif isinstance(table, list):
-            temp = SeabornTable.list_to_obj(table, columns, row_columns,
+            temp = self.list_to_obj(table, columns, row_columns,
                                             key_on=key_on)
             self._column_index, self.table = temp._column_index, temp.table
             self._row_columns = list(self._column_index.keys())
         elif getattr(table, 'headings', None) is not None and \
-                        getattr(table, 'row_columns', None) is not None:
+                getattr(table, 'row_columns', None) is not None:
             self.row_columns = row_columns or columns or table.headings
             self.table = [SeabornRow(self._column_index,
                                      [row[c] for c in self.row_columns])
@@ -202,19 +226,8 @@ class SeabornTable(object):
         :param key_on: list of str of columns to key on
         :return: SeabornTable
         """
-        if file_path is not None and os.path.exists(file_path):
-            with open(file_path, 'rb') as f:
-                text = f.read()
-        if sys.version_info[0] == 3 and isinstance(text, bytes):
-            text = text.decode(SeabornTable.ENCODING)
         data = []
-        # text = text.replace('\xdf', 'B')
-        text = text.replace('\xef\xbb\xbf', '')
-        if text.find('\r\n') == -1:
-            lines = text.split('\n')
-        else:
-            lines = text.split('\r\n')
-
+        lines = cls._get_lines(file_path, text, replace=u'\ufeff')
         for i in range(len(lines)):
             lines[i] = lines[i].replace('\r', '\n')
             lines[i] = lines[i].replace('\\r', '\r').split(',')
@@ -251,13 +264,44 @@ class SeabornTable(object):
                                row_columns=row_columns, key_on=key_on)
 
     @classmethod
+    def grid_to_obj(cls, file_path=None, text='', delim=None,
+                    columns=None, key_on=None):
+        """
+        This will convert a grid file or grid text into a seaborn table
+        and return it
+        :param file_path: str of the path to the file
+        :param text: str of the grid text
+        :param columns: list of str of columns to use
+        :param key_on: list of str of columns to key on
+        :return: SeabornTable
+        """
+        delim = delim if delim else cls.FANCY
+        lines = cls._get_lines(file_path, text)
+        data=[]
+        for i in range(len(lines)):
+            if i % 2 == 1:
+                row = lines[i].split(delim['internal vertical edge'])[1:-1]
+                data.append([cls._eval_cell(r) for r in row])
+        row_columns = data[0]
+        if len(row_columns) != len(set(row_columns)): # make unique
+            for i, col in enumerate(row_columns):
+                count = row_columns[:i].count(col)
+                row_columns[i] = '%s_%s'%(col, count) if count else col
+        return cls.list_to_obj(data[1:], columns=columns,
+                               row_columns=row_columns, key_on=key_on)
+
+    @classmethod
     def file_to_obj(cls, file_path, columns=None):
         if file_path.endswith('.txt'):
             return cls.str_to_obj(file_path=file_path, columns=columns)
+        elif file_path.endswith('.grid'):
+            return cls.grid_to_obj(file_path=file_path, columns=columns)
         elif file_path.endswith('.md'):
             return cls.mark_down_to_obj(file_path=file_path, columns=columns)
         elif file_path.endswith('.csv'):
             return cls.csv_to_obj(file_path=file_path, columns=columns)
+        elif file_path.endswith('.grid'):
+            return cls.grid_to_obj(file_path=file_path, columns=columns)
         else:
             raise 'Unknown file type: %s' % file_path
 
@@ -278,20 +322,14 @@ class SeabornTable(object):
         :param eval_cells: bool if True will try to evaluate numbers
         :return: SeabornTable
         """
-        if file_path and os.path.exists(file_path):
-            with open(file_path, 'rb') as f:
-                text = f.read()
-        if sys.version_info[0] == 3 and isinstance(text, bytes):
-            text = text.decode(SeabornTable.ENCODING)
-        text = text.strip().split('\n')
+        text = cls._get_lines(file_path, text)
         if len(text) == 1:
             text = text[0].split('\r')
 
         eval_cell = cls._eval_cell if eval_cells else lambda x: x
         list_of_list = [[eval_cell(cell) for cell in row.split(deliminator)]
-                        for row in text if
-                        not remove_empty_rows or True in [bool(r) for r in
-                                                          row]]
+                        for row in text if not remove_empty_rows or
+                        True in [bool(r) for r in row]]
 
         if list_of_list[0][0] == '' and list_of_list[0][-1] == '':
             list_of_list = [row[1:-1] for row in list_of_list]
@@ -311,12 +349,7 @@ class SeabornTable(object):
         :param key_on: list of str of columns to key on
         :return: OrderedDict of {<header>: SeabornTable}
         """
-        if file_path is not None and os.path.exists(file_path):
-            with open(file_path, 'rb') as f:
-                text = f.read()
-
-        if sys.version_info[0] == 3 and isinstance(text, bytes):
-            text = text.decode(SeabornTable.ENCODING)
+        text = cls._get_lines(file_path, text, split_lines=False)
         ret = OrderedDict()
         paragraphs = text.split('####')
         for paragraph in paragraphs[1:]:
@@ -340,12 +373,7 @@ class SeabornTable(object):
             any lines between ```
         :return: SeabornTable
         """
-        if file_path is not None and os.path.exists(file_path):
-            with open(file_path, 'rb') as f:
-                text = f.read()
-        if sys.version_info[0] == 3 and isinstance(text, bytes):
-            text = text.decode(SeabornTable.ENCODING)
-        text = text.replace('\r\n', '\n').replace('\r', '\n').strip()
+        text = cls._get_lines(file_path, text, split_lines=False)
 
         if ignore_code_blocks:
             text = text.split("```")
@@ -363,7 +391,7 @@ class SeabornTable(object):
                 continue
             assert row[0] == '|' and row[-1] == '|', \
                 'The following line is formatted correctly: %s' % row
-            table.append([SeabornTable._clean_cell(cell) for cell in
+            table.append([cls._clean_cell(cell) for cell in
                           row[1:-1].split('|')])
         return cls(table=table[2:], columns=columns or table[0], key_on=key_on)
 
@@ -423,6 +451,62 @@ class SeabornTable(object):
         ret = tab + (u'\n' + tab).join(ret)
         self._save_file(file_path, ret)
         return ret
+
+    def obj_to_grid(self, file_path=None, delim=None, tab=None):
+        """
+        :param file_path: path to data file, defaults to
+                            self's contents if left alone
+        :param delim:     dict of deliminators, defaults to
+                            obj_to_str's method:
+        :param tab:     string of offset of the table
+        :return:        string representing the grid formation
+                        of the relevant data
+        """
+
+        div_delims = {"top": ['top left corner', 'top intersect',
+                              'top edge', 'top right corner'],
+                      "divide": ['left major intersect',
+                                 'internal major intersect',
+                                 'bottom edge', 'right major intersect'],
+                      "middle": ['left intersect', 'internal intersect',
+                                 'internal horizontal edge', 'right intersect'],
+                      "bottom": ['bottom left intersect', 'bottom intersect',
+                                 'bottom edge', 'bottom right corner']}
+        delim = delim if delim else {}
+        for tag in self.FANCY.keys():
+            delim[tag] = delim[tag] if tag in delim.keys() \
+                else self.FANCY[tag]
+
+        tab = self.tab if tab is None else tab
+
+        list_of_list = [[self._safe_str(cell, quote_numbers=False)
+                         for cell in row] for row in self]
+        list_of_list = [self.columns] + list_of_list
+
+        column_widths = self._get_column_widths(list_of_list,
+                                                padding=0, pad_last_column=True)
+        ret = [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
+               for row in list_of_list]
+        grid_row={}
+
+        for key in div_delims.keys():
+            draw = div_delims[key]
+            grid_row[key] = delim[draw[0]]
+            grid_row[key] += delim[draw[1]].join(
+                [delim[draw[2]] * width
+                 for width in column_widths])
+            grid_row[key] += delim[draw[3]]
+
+        ret = [delim['left edge']+delim['internal vertical edge'].join(row)+
+               delim['right edge'] for row in ret]
+        header = [grid_row["top"], ret[0], grid_row["divide"]]
+        body = [[row, grid_row["middle"]] for row in ret[1:]]
+        body = [item for pair in body for item in pair][:-1]
+        ret = header + body + [grid_row["bottom"]]
+        ret = tab + (u'\n'+tab).join(ret)
+        self._save_file(file_path, ret)
+        return ret
+
 
     def obj_to_csv(self, quote_everything=False, space_columns=True,
                    file_path=None):
@@ -499,8 +583,10 @@ class SeabornTable(object):
             self.obj_to_html(file_path=file_path)
         elif file_path.endswith('md'):
             self.obj_to_mark_down(file_path=file_path, title_columns=False)
+        elif file_path.endswith('grid'):
+            self.obj_to_grid(file_path=file_path)
         else:
-            raise 'Unknown file type: %s' % file_path
+            raise Exception('Unknown file type: %s' % file_path)
 
     @property
     def tab(self):
@@ -509,7 +595,7 @@ class SeabornTable(object):
     @tab.setter
     def tab(self, value):
         if sys.version_info[0] == 2:
-            value = value.decode(SeabornTable.ENCODING)
+            value = value.decode(self.ENCODING)
         self._tab = value
 
     @property
@@ -519,7 +605,7 @@ class SeabornTable(object):
     @deliminator.setter
     def deliminator(self, value):
         if sys.version_info[0] == 2:
-            value = value.decode(SeabornTable.ENCODING)
+            value = value.decode(self.ENCODING)
         self._deliminator = value
 
     @property
@@ -631,7 +717,7 @@ class SeabornTable(object):
         :param kwargs: dict of column == value
         :return: SeabornTable
         """
-        ret = SeabornTable(
+        ret = self.__class__(
             columns=self.columns, row_columns=self.row_columns, tab=self.tab,
             key_on=self.key_on)
         for row in self:
@@ -646,7 +732,7 @@ class SeabornTable(object):
         :param value: obj of the value to test for
         :return: SeabornTable
         """
-        ret = SeabornTable(
+        ret = self.__class__(
             columns=self.columns, row_columns=self.row_columns, tab=self.tab,
             key_on=self.key_on)
         for row in self:
@@ -727,6 +813,28 @@ class SeabornTable(object):
                 # noinspection PyTypeChecker
                 self.set_column(c, self._parameters[c])
 
+
+    @classmethod
+    def _get_lines(cls, file_path=None, text='', replace=None, split_lines=True):
+        if file_path is not None:
+            assert os.path.exists(file_path), \
+                "Missing file: %s"%file_path
+            with open(file_path, 'rb') as f:
+                text = f.read()
+        if (sys.version_info[0] == 3 and isinstance(text, bytes) or
+            sys.version_info[0] == 2):
+            text = text.decode(cls.ENCODING)
+
+        if replace:
+            text = text.replace(replace, u'')
+        if split_lines:
+            if text.find(u'\r\n') == -1:
+                text = text.split(u'\n')
+            else:
+                text = text.split(u'\r\n')
+        assert text, 'Text is empty'
+        return text
+
     def __str__(self):
         ret = self.obj_to_str()
         if sys.version_info[0] == 2:
@@ -750,12 +858,11 @@ class SeabornTable(object):
                 SeabornRow(column_index,
                            [row.get(c, None) for c in column_index]))
 
-        return SeabornTable(table=new_table,
-                            columns=self.columns)
+        return self.__class__(table=new_table, columns=self.columns)
 
     def __eq__(self, other):
         if not isinstance(other, SeabornTable):
-            other = SeabornTable(other)
+            other = self.__class__(other)
         return self.table.__eq__(other.table)
 
     def __ne__(self, other):
@@ -763,22 +870,22 @@ class SeabornTable(object):
 
     def __gt__(self, other):
         if not isinstance(other, SeabornTable):
-            other = SeabornTable(other)
+            other = self.__class__(other)
         return self.table.__gt__(other.table)
 
     def __lt__(self, other):
         if not isinstance(other, SeabornTable):
-            other = SeabornTable(other)
+            other = self.__class__(other)
         return self.table.__lt__(other.table)
 
     def __ge__(self, other):
         if not isinstance(other, SeabornTable):
-            other = SeabornTable(other)
+            other = self.__class__(other)
         return self.table.__ge__(other.table)
 
     def __le__(self, other):
         if not isinstance(other, SeabornTable):
-            other = SeabornTable(other)
+            other = self.__class__(other)
         return self.table.__le__(other.table)
 
     def __len__(self):
@@ -797,7 +904,7 @@ class SeabornTable(object):
                     return True
             return False
         elif (isinstance(value, SeabornRow) and
-                      getattr(value, 'column_index') == self._column_index):
+              getattr(value, 'column_index') == self._column_index):
             return value in self.table
         elif isinstance(value, SeabornRow):
             value = [value[k] for k in self.row_columns]
@@ -943,10 +1050,9 @@ class SeabornTable(object):
         """
         keys = keys or self.key_on
         keys = keys if isinstance(keys, (list, tuple)) else [keys]
-        if sys.version_info[0] == 2:
-            self.table.sort(ByKey(keys))
-        else:
-            self.table.sort(key=ByKey(keys))
+        for key in reversed(keys):
+            reverse, key = (True, key[1:]) if key[0] == '-' else (False, key)
+            self.table.sort(key=lambda row: row[key], reverse=reverse)
 
     def reverse(self):
         self.table.reverse()
@@ -957,8 +1063,11 @@ class SeabornTable(object):
         def _len(text):
             if len(text) > 15:
                 pass
-            if u'\n' in text:
-                return len(text.split(u'\n', 1)[0])
+            if sys.version[0] == 2 and isinstance(text, unicode):
+                if u'\n' in text:
+                    return len(text.split(u'\n', 1)[0])
+            elif '\n' in text:
+                return len(text.split('\n', 1)[0])
             return len(text)
 
         widths = []
@@ -969,8 +1078,8 @@ class SeabornTable(object):
             widths[-1] = 0
         return widths
 
-    @staticmethod
-    def _safe_str(cell, quote_numbers=True, repr_line_break=False):
+    @classmethod
+    def _safe_str(cls, cell, quote_numbers=True, repr_line_break=False):
         """
         :param cell: obj to turn in to a string
         :param quote_numbers: if True numbers will be quoted
@@ -978,11 +1087,9 @@ class SeabornTable(object):
         if cell is None:
             return ''
 
-        ret = str(cell)
-        if sys.version_info[0] == 2:
-            ret = ret.decode(SeabornTable.ENCODING)
+        ret = str(cell) if not isinstance(cell, BASESTRING) else cell
         if quote_numbers and isinstance(cell, BASESTRING):
-            if (ret.replace('.', '').isdigit() or
+            if (ret.replace(u'.', u'').isdigit() or
                         u'"' in ret or ret in [u'False', u'True']):
                 ret = u'"%s"' % ret
 
@@ -990,8 +1097,8 @@ class SeabornTable(object):
             ret = ret.replace(u'\n', u'\\n')
         return ret
 
-    @staticmethod
-    def _excel_cell(cell, quote_everything=False):
+    @classmethod
+    def _excel_cell(cls, cell, quote_everything=False):
         """
         This will return a text that excel interprets correctly when
         importing csv
@@ -1006,9 +1113,7 @@ class SeabornTable(object):
         if cell is False:
             return u'FALSE'
 
-        ret = str(cell)
-        if sys.version_info[0] == 2:
-            ret = ret.decode(SeabornTable.ENCODING)
+        ret = cell if isinstance(cell, BASESTRING) else UNICODE(cell)
         if isinstance(cell, (int, float)) and not quote_everything:
             return ret
 
@@ -1055,8 +1160,8 @@ class SeabornTable(object):
         return OrderedDict(
             [(col, index) for index, col in enumerate(row_columns)])
 
-    @staticmethod
-    def _get_normalized_columns(list_):
+    @classmethod
+    def _get_normalized_columns(cls, list_):
         """
         :param list_: list of dict
         :return: list of string of every key in all the dictionaries
@@ -1064,7 +1169,7 @@ class SeabornTable(object):
         ret = []
         for row in list_:
             if len(row.keys()) > len(ret):
-                ret = SeabornTable._ordered_keys(row)
+                ret = cls._ordered_keys(row)
 
         for row in list_:
             for key in row.keys():
@@ -1139,17 +1244,17 @@ class SeabornTable(object):
                     else:
                         return
 
-    @staticmethod
-    def _save_file(file_path, text):
+    @classmethod
+    def _save_file(cls, file_path, text):
         if file_path is None:
             return
         if isinstance(text, UNICODE):
-            text = text.encode(SeabornTable.ENCODING)
+            text = text.encode(cls.ENCODING)
         with open(file_path, 'wb') as fp:
             fp.write(text)
 
-    @staticmethod
-    def _html_cell(cell):
+    @classmethod
+    def _html_cell(cls, cell):
         head = '<th'
         if isinstance(cell, HTMLRowRespan):
             if cell.count == 0:
@@ -1158,10 +1263,10 @@ class SeabornTable(object):
 
         if cell is None:
             return '%s/>' % head
-        if '\n' not in SeabornTable._safe_str(cell):
+        if '\n' not in cls._safe_str(cell):
             return '%s>%s</th>' % (head, cell)
         return '%s align="left">%s</th>' % (
-            head, SeabornTable._safe_str(cell).replace('\n', '<br>'))
+            head, cls._safe_str(cell).replace('\n', '<br>'))
 
     def _html_link_cells(self):
         """
@@ -1230,10 +1335,10 @@ class SeabornTable(object):
 
         values_width = [len(name)]
         if isinstance(self._parameters.get(name, None), list):
-            values_width += [len(SeabornTable._safe_str(p, **kwargs))
+            values_width += [len(self._safe_str(p, **kwargs))
                              for p in self._parameters[name]]
 
-        values_width += [len(SeabornTable._safe_str(row[index], **kwargs))
+        values_width += [len(self._safe_str(row[index], **kwargs))
                          for row in self.table]
 
         ret = max(values_width)
@@ -1325,40 +1430,6 @@ class HTMLRowRespan(object):
 
     def __cmp__(self, other):
         return self.value != other
-
-
-class ByKey(object):
-    def __init__(self, keys, comp=None):
-        self.keys = isinstance(keys, list) and keys or [keys]
-        self.comp = comp or (lambda x: x)
-        if sys.version_info[0] == 2:
-            self.call = self.call2
-
-    def __call__(self, *args):
-        return self.call(*args)
-
-    def call2(self, obj1, obj2):
-        for key in self.keys:
-            low_to_high = 1
-            if key[0] == '-':
-                low_to_high = -1
-                key = key[1:]
-
-            if obj1[key] > obj2[key]:
-                return low_to_high
-            if obj1[key] < obj2[key]:
-                return 0 - low_to_high
-        return 0
-
-    def call(self, obj):
-        ret = []
-        for key in self.keys:
-            low_to_high = 1
-            if key[0] == '-':
-                low_to_high = -1
-                key = key[1:]
-            ret.append(self.comp(obj[key]) * low_to_high)
-        return ret
 
 
 BASESTRING = basestring if sys.version_info[0] == 2 else str
