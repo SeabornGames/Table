@@ -1,3 +1,12 @@
+Changes in 2.0.0
+================
+
+* PIP library somehow got an older version (1.3.3), so we are starting fresh
+  with a major bump.
+
+* import from seaborn_table.__init__ now works.
+
+
 Changes in 1.3.2
 ================
 
