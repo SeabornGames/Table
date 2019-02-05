@@ -1,4 +1,4 @@
-Changes in 2.2.0
+Changes in 2.1.0
 ================
 
 * file_to_obj now accepts the key_on argument.
