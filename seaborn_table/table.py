@@ -91,7 +91,7 @@ class SeabornTable(object):
             self._row_columns = list(self._column_index.keys())
         elif isinstance(table, list):
             temp = self.list_to_obj(table, columns, row_columns,
-                                            key_on=key_on)
+                                    key_on=key_on)
             self._column_index, self.table = temp._column_index, temp.table
             self._row_columns = list(self._column_index.keys())
         elif getattr(table, 'headings', None) is not None and \
@@ -214,10 +214,18 @@ class SeabornTable(object):
         return cls(table, columns, row_columns, tab, key_on)
 
     @classmethod
-    def json_to_obj(cls, filename=None, text='', row_columns=None, key_on=None):
-        if filename is not None:
-            text = open(filename, 'r').read()
-        return cls(table=json.load(text), row_columns=row_columns,
+    def json_to_obj(cls, file_path=None, text='', columns=None,
+                    key_on=None, guess_column_order=True):
+        if file_path is not None:
+            with open(file_path, 'r') as fn:
+                text = fn.read()
+
+        json_data=json.loads(text)
+        if columns is None and guess_column_order:
+            columns = sorted(cls(table=json_data).row_columns,
+                             key=lambda x: text.find('"%s":'%x))
+
+        return cls(table=json_data, columns=columns,
                    key_on=key_on)
 
     @classmethod
@@ -468,8 +476,11 @@ class SeabornTable(object):
         self._save_file(file_path, ret)
         return ret
 
-    def obj_to_json(self, file_path=None):
-        ret = json.dumps([row.obj_to_dict() for row in self])
+    def obj_to_json(self, file_path=None, indent=2, sort_keys=False):
+        ret = json.dumps([row.obj_to_ordered_dict() for row in self],
+                         indent=indent, sort_keys=sort_keys)
+        if sys.version_info[0] == 2:
+            ret = ret.replace(', \n', ',\n')
         self._save_file(file_path, ret)
         return ret
 
@@ -1411,6 +1422,10 @@ class SeabornRow(list):
     def obj_to_dict(self):
         return {col: list.__getitem__(self, i)
                 for col, i in self.column_index.items()}
+
+    def obj_to_ordered_dict(self):
+        return OrderedDict([(col, list.__getitem__(self, i))
+                             for col, i in self.column_index.items()])
 
     def get(self, key, default=None):
         index = self.column_index.get(key, None)
