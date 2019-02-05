@@ -16,6 +16,7 @@
     This is primarily as a library but can be used as a script with:
     > seaborn_table source_file destination_file
 """
+import json
 import os
 import sys
 from collections import OrderedDict
@@ -213,6 +214,13 @@ class SeabornTable(object):
         return cls(table, columns, row_columns, tab, key_on)
 
     @classmethod
+    def json_to_obj(cls, filename=None, text='', row_columns=None, key_on=None):
+        if filename is not None:
+            text = open(filename, 'r').read()
+        return cls(table=json.load(text), row_columns=row_columns,
+                   key_on=key_on)
+
+    @classmethod
     def csv_to_obj(cls, file_path=None, text='', columns=None,
                    remove_empty_rows=True, key_on=None):
         """
@@ -264,7 +272,7 @@ class SeabornTable(object):
                                row_columns=row_columns, key_on=key_on)
 
     @classmethod
-    def grid_to_obj(cls, file_path=None, text='', delim=None,
+    def grid_to_obj(cls, file_path=None, text='', edges=None,
                     columns=None, key_on=None):
         """
         This will convert a grid file or grid text into a seaborn table
@@ -275,12 +283,12 @@ class SeabornTable(object):
         :param key_on: list of str of columns to key on
         :return: SeabornTable
         """
-        delim = delim if delim else cls.FANCY
+        edges = edges if edges else cls.FANCY
         lines = cls._get_lines(file_path, text)
         data=[]
         for i in range(len(lines)):
             if i % 2 == 1:
-                row = lines[i].split(delim['internal vertical edge'])[1:-1]
+                row = lines[i].split(edges['internal vertical edge'])[1:-1]
                 data.append([cls._eval_cell(r) for r in row])
         row_columns = data[0]
         if len(row_columns) != len(set(row_columns)): # make unique
@@ -291,17 +299,25 @@ class SeabornTable(object):
                                row_columns=row_columns, key_on=key_on)
 
     @classmethod
-    def file_to_obj(cls, file_path, columns=None):
+    def file_to_obj(cls, file_path, columns=None, key_on=None):
         if file_path.endswith('.txt'):
-            return cls.str_to_obj(file_path=file_path, columns=columns)
+            return cls.str_to_obj(file_path=file_path, columns=columns,
+                                  key_on=key_on)
         elif file_path.endswith('.grid'):
-            return cls.grid_to_obj(file_path=file_path, columns=columns)
+            return cls.grid_to_obj(file_path=file_path, columns=columns,
+                                   key_on=key_on)
         elif file_path.endswith('.md'):
-            return cls.mark_down_to_obj(file_path=file_path, columns=columns)
+            return cls.mark_down_to_obj(file_path=file_path, columns=columns,
+                                        key_on=key_on)
         elif file_path.endswith('.csv'):
-            return cls.csv_to_obj(file_path=file_path, columns=columns)
+            return cls.csv_to_obj(file_path=file_path, columns=columns,
+                                  key_on=key_on)
         elif file_path.endswith('.grid'):
-            return cls.grid_to_obj(file_path=file_path, columns=columns)
+            return cls.grid_to_obj(file_path=file_path, columns=columns,
+                                   key_on=key_on)
+        elif file_path.endswith('.json'):
+            return cls.json_to_obj(file_path=file_path, columns=columns,
+                                   key_on=key_on)
         else:
             raise 'Unknown file type: %s' % file_path
 
@@ -452,6 +468,11 @@ class SeabornTable(object):
         self._save_file(file_path, ret)
         return ret
 
+    def obj_to_json(self, file_path=None):
+        ret = json.dumps([row.obj_to_dict() for row in self])
+        self._save_file(file_path, ret)
+        return ret
+
     def obj_to_grid(self, file_path=None, delim=None, tab=None):
         """
         :param file_path: path to data file, defaults to
@@ -585,6 +606,8 @@ class SeabornTable(object):
             self.obj_to_mark_down(file_path=file_path, title_columns=False)
         elif file_path.endswith('grid'):
             self.obj_to_grid(file_path=file_path)
+        elif file_path.endswith('.json'):
+            self.obj_to_json(file_path=file_path)
         else:
             raise Exception('Unknown file type: %s' % file_path)
 
@@ -815,7 +838,8 @@ class SeabornTable(object):
 
 
     @classmethod
-    def _get_lines(cls, file_path=None, text='', replace=None, split_lines=True):
+    def _get_lines(cls, file_path=None, text='', replace=None,
+                   split_lines=True):
         if file_path is not None:
             assert os.path.exists(file_path), \
                 "Missing file: %s"%file_path
