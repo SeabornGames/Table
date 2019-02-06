@@ -477,7 +477,7 @@ class SeabornTable(object):
         return ret
 
     def obj_to_json(self, file_path=None, indent=2, sort_keys=False):
-        ret = json.dumps([row.obj_to_ordered_dict() for row in self],
+        ret = json.dumps([row.obj_to_ordered_dict(self.columns) for row in self],
                          indent=indent, sort_keys=sort_keys)
         if sys.version_info[0] == 2:
             ret = ret.replace(', \n', ',\n')
@@ -1419,13 +1419,16 @@ class SeabornRow(list):
     def __str__(self):
         return super(SeabornRow, self).__str__()
 
-    def obj_to_dict(self):
-        return {col: list.__getitem__(self, i)
-                for col, i in self.column_index.items()}
+    def obj_to_dict(self, columns=None):
+        columns = columns if columns else self.column_index.keys()
+        return {col: list.__getitem__(self, self.column_index[col])
+                for col in columns}
 
-    def obj_to_ordered_dict(self):
-        return OrderedDict([(col, list.__getitem__(self, i))
-                             for col, i in self.column_index.items()])
+    def obj_to_ordered_dict(self, columns=None):
+        columns = columns if columns else self.column_index.keys()
+        return OrderedDict([
+            (col, list.__getitem__(self, self.column_index[col]))
+            for col in columns])
 
     def get(self, key, default=None):
         index = self.column_index.get(key, None)
