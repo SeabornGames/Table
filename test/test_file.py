@@ -49,6 +49,9 @@ class FileConversionTest(unittest.TestCase):
     def test_txt_to_grid(self):
         self.file_conversion('txt', 'grid')
 
+    def test_txt_to_json(self):
+        self.file_conversion('txt', 'json')
+
     def test_csv_to_md(self):
         self.file_conversion('csv', 'md')
 
@@ -63,6 +66,9 @@ class FileConversionTest(unittest.TestCase):
 
     def test_csv_to_grid(self):
         self.file_conversion('csv', 'grid')
+
+    def test_csv_to_json(self):
+        self.file_conversion('csv', 'json')
 
     def test_md_to_md(self):
         self.file_conversion('md', 'md')
@@ -79,6 +85,9 @@ class FileConversionTest(unittest.TestCase):
     def test_md_to_grid(self):
         self.file_conversion('md', 'grid')
 
+    def test_md_to_json(self):
+        self.file_conversion('md', 'json')
+
     def test_grid_to_md(self):
         self.file_conversion('grid', 'md')
 
@@ -93,6 +102,28 @@ class FileConversionTest(unittest.TestCase):
 
     def test_grid_to_txt(self):
         self.file_conversion('grid', 'txt')
+
+    def test_grid_to_json(self):
+        self.file_conversion('grid', 'json')
+
+    def test_json_to_md(self):
+        self.file_conversion('json', 'md')
+
+    def test_json_to_json(self):
+        self.file_conversion('json', 'json')
+
+    def test_json_to_csv(self):
+        self.file_conversion('json', 'csv')
+
+    def test_json_to_html(self):
+        self.file_conversion('json', 'html')
+
+    def test_json_to_txt(self):
+        self.file_conversion('json', 'txt')
+
+    def test_json_to_grid(self):
+        self.file_conversion('json', 'grid')
+
 
 if __name__ == '__main__':
     unittest.main()
