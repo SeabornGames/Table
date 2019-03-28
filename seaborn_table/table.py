@@ -389,9 +389,6 @@ class SeabornTable(object):
         lines = [row.split() for row in text]
         list_of_list = cls._merge_quoted_cells(lines, deliminator,
                                                remove_empty_rows, eval_cells)
-        if list_of_list[0][0] == '' and list_of_list[0][-1] == '':
-            list_of_list = [row[1:-1] for row in list_of_list]
-
         return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns,
                                row_columns=row_columns)
 
@@ -424,9 +421,6 @@ class SeabornTable(object):
         list_of_list = [[eval_cell(cell) for cell in row.split(deliminator)]
                         for row in text if not remove_empty_rows or
                         True in [bool(r) for r in row]]
-
-        if list_of_list[0][0] == '' and list_of_list[0][-1] == '':
-            list_of_list = [row[1:-1] for row in list_of_list]
 
         return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns,
                                row_columns=row_columns)
