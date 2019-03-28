@@ -319,32 +319,15 @@ class SeabornTable(object):
 
     @classmethod
     def file_to_obj(cls, file_path, columns=None, key_on=None):
-        if file_path.endswith('.txt'):
-            return cls.str_to_obj(file_path=file_path, columns=columns,
-                                  key_on=key_on)
-        elif file_path.endswith('.grid'):
-            return cls.grid_to_obj(file_path=file_path, columns=columns,
+        type_to_method = {file_type: '%s_to_obj'%file_type
+                          for file_type in cls.KNOWN_FORMATS}
+        type_to_method.update({'txt': 'str_to_obj', 'md': 'mark_down_to_obj'})
+        for file_type in cls.KNOWN_FORMATS:
+            if file_path.endswith('.%s'%file_type):
+                type_to_obj = getattr(cls, type_to_method[file_type])
+                return type_to_obj(file_path=file_path, columns=columns,
                                    key_on=key_on)
-        elif file_path.endswith('.md'):
-            return cls.mark_down_to_obj(file_path=file_path, columns=columns,
-                                        key_on=key_on)
-        elif file_path.endswith('.csv'):
-            return cls.csv_to_obj(file_path=file_path, columns=columns,
-                                  key_on=key_on)
-        elif file_path.endswith('.grid'):
-            return cls.grid_to_obj(file_path=file_path, columns=columns,
-                                   key_on=key_on)
-        elif file_path.endswith('.json'):
-            return cls.json_to_obj(file_path=file_path, columns=columns,
-                                   key_on=key_on)
-        elif file_path.endswith('.rst'):
-            return cls.rst_to_obj(file_path=file_path, columns=columns,
-                                   key_on=key_on)
-        elif file_path.endswith('.psql'):
-            return cls.psql_to_obj(file_path=file_path, columns=columns,
-                                   key_on=key_on)
-        else:
-            raise 'Unknown file type: %s' % file_path
+        raise Exception('Unknown file type in : %s' % file_path)
 
     @classmethod
     def str_to_obj(cls, file_path='', text='', columns=None,
@@ -734,24 +717,17 @@ class SeabornTable(object):
         return ret
 
     def obj_to_file(self, file_path):
-        if file_path.endswith('.txt'):
-            self.obj_to_str(file_path=file_path)
-        elif file_path.endswith('.csv'):
-            self.obj_to_csv(file_path=file_path)
-        elif file_path.endswith('html'):
-            self.obj_to_html(file_path=file_path)
-        elif file_path.endswith('md'):
-            self.obj_to_mark_down(file_path=file_path, title_columns=False)
-        elif file_path.endswith('grid'):
-            self.obj_to_grid(file_path=file_path)
-        elif file_path.endswith('.json'):
-            self.obj_to_json(file_path=file_path)
-        elif file_path.endswith('.rst'):
-            self.obj_to_rst(file_path=file_path)
-        elif file_path.endswith('.psql'):
-            self.obj_to_psql(file_path=file_path)
-        else:
-            raise Exception('Unknown file type: %s' % file_path)
+        if file_path.endswith('md'):
+            return self.obj_to_mark_down(file_path=file_path,
+                                         title_columns=False)
+        type_to_method = {file_type: 'obj_to_%s'%file_type
+                          for file_type in self.KNOWN_FORMATS}
+        type_to_method.update({'txt': 'obj_to_str'})
+        for file_type in self.KNOWN_FORMATS:
+            if file_path.endswith('.%s'%file_type):
+                obj_to_type = getattr(self, type_to_method[file_type])
+                return obj_to_type(file_path=file_path)
+        raise Exception('Unknown file type: %s' % file_path)
 
     @property
     def tab(self):
