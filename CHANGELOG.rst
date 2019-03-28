@@ -1,3 +1,13 @@
+Changes in 2.2.0
+================
+
+* Added file format psql.
+
+* Added file format rst.
+
+* Added known format as ``KNOWN_FORMATS``.
+
+
 Changes in 2.1.0
 ================
 

@@ -24,6 +24,7 @@ from functools import reduce
 
 
 class SeabornTable(object):
+    KNOWN_FORMATS = ['md', 'txt', 'psql', 'rst', 'html', 'grid', 'json', 'csv']
     DEFAULT_DELIMINATOR = u'\t'
     DEFAULT_TAB = u''
     ENCODING = 'utf-8'
@@ -229,8 +230,38 @@ class SeabornTable(object):
                    key_on=key_on)
 
     @classmethod
+    def _merge_quoted_cells(cls, lines, deliminator, remove_empty_rows,
+                            eval_cells):
+        eval_cell = cls._eval_cell if eval_cells else lambda x: x
+        ret = []
+        line_index = 0
+        while line_index < len(lines):
+            cells = lines[line_index]
+            line_index += 1
+            i = 0
+            row = []
+            while i < len(cells):
+                cell = cells[i]  # XXX this is slow in pycharm debug
+                i += 1
+                while cell.count('"') % 2:
+                    if i >= len(cells):  # excel causes this to happen
+                        cells += lines[line_index]
+                        cell += "\n" + cells[i]  # add the line break back in
+                        line_index += 1
+                    else:
+                        cell += deliminator + cells[i]
+                    i += 1
+                cell = eval_cell(cell, True)
+
+                row.append(cell)
+            if not remove_empty_rows or True in [bool(r) for r in row]:
+                ret.append(row)
+        return ret
+
+    @classmethod
     def csv_to_obj(cls, file_path=None, text='', columns=None,
-                   remove_empty_rows=True, key_on=None):
+                   remove_empty_rows=True, key_on=None, deliminator=',',
+                   eval_cells=True):
         """
         This will convert a csv file or csv text into a seaborn table
         and return it
@@ -240,36 +271,16 @@ class SeabornTable(object):
         :param remove_empty_rows: bool if True will remove empty rows
                 which can happen in non-trimmed file
         :param key_on: list of str of columns to key on
+        :param deliminator: str to use as a deliminator, defaults to ,
+        :param eval_cells: bool if True will try to evaluate numbers
         :return: SeabornTable
         """
-        data = []
         lines = cls._get_lines(file_path, text, replace=u'\ufeff')
         for i in range(len(lines)):
             lines[i] = lines[i].replace('\r', '\n')
             lines[i] = lines[i].replace('\\r', '\r').split(',')
-        line_index = 0
-        while line_index < len(lines):
-            cells = lines[line_index]
-            line_index += 1
-            i = 0
-            row = []
-            while i < len(cells):
-                cell = cells[i]  # this is slow in pycharm debug
-                i += 1
-                while cell.count('"') % 2:
-                    if i >= len(cells):  # excel causes this to happen
-                        cells += lines[line_index]
-                        cell += "\n" + cells[i]  # add the line break back in
-                        line_index += 1
-                    else:
-                        cell += ',' + cells[i]
-                    i += 1
-                cell = cls._eval_cell(cell, True)
-
-                row.append(cell)
-            if not remove_empty_rows or True in [bool(r) for r in row]:
-                data.append(row)
-
+        data = cls._merge_quoted_cells(lines, deliminator, remove_empty_rows,
+                                       eval_cells)
         row_columns = data[0]
         if len(row_columns) != len(set(row_columns)):  # make unique
             for i, col in enumerate(row_columns):
@@ -326,6 +337,12 @@ class SeabornTable(object):
         elif file_path.endswith('.json'):
             return cls.json_to_obj(file_path=file_path, columns=columns,
                                    key_on=key_on)
+        elif file_path.endswith('.rst'):
+            return cls.rst_to_obj(file_path=file_path, columns=columns,
+                                   key_on=key_on)
+        elif file_path.endswith('.psql'):
+            return cls.psql_to_obj(file_path=file_path, columns=columns,
+                                   key_on=key_on)
         else:
             raise 'Unknown file type: %s' % file_path
 
@@ -349,6 +366,76 @@ class SeabornTable(object):
         text = cls._get_lines(file_path, text)
         if len(text) == 1:
             text = text[0].split('\r')
+
+        eval_cell = cls._eval_cell if eval_cells else lambda x: x
+        list_of_list = [[eval_cell(cell) for cell in row.split(deliminator)]
+                        for row in text if not remove_empty_rows or
+                        True in [bool(r) for r in row]]
+
+        if list_of_list[0][0] == '' and list_of_list[0][-1] == '':
+            list_of_list = [row[1:-1] for row in list_of_list]
+
+        return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns,
+                               row_columns=row_columns)
+
+
+    @classmethod
+    def rst_to_obj(cls, file_path='', text='', columns=None,
+                   remove_empty_rows=True, key_on=None,
+                   row_columns=None, deliminator=' ', eval_cells=True):
+        """
+        This will convert a csv file or csv text into a seaborn table
+        and return it
+        :param file_path: str of the path to the file
+        :param text: str of the csv text
+        :param columns: list of str of columns to use
+        :param row_columns: list of str of columns in data but not to use
+        :param remove_empty_rows: bool if True will remove empty rows
+        :param key_on: list of str of columns to key on
+        :param deliminator: str to use as a deliminator
+        :param eval_cells: bool if True will try to evaluate numbers
+        :return: SeabornTable
+        """
+        text = cls._get_lines(file_path, text)
+        if len(text) == 1:
+            text = text[0].split('\r')
+
+        for i in [-1, 2, 0]:
+            if not text[i].replace('=', '').strip():
+                text.pop(i) # get rid of bar
+        lines = [row.split() for row in text]
+        list_of_list = cls._merge_quoted_cells(lines, deliminator,
+                                               remove_empty_rows, eval_cells)
+        if list_of_list[0][0] == '' and list_of_list[0][-1] == '':
+            list_of_list = [row[1:-1] for row in list_of_list]
+
+        return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns,
+                               row_columns=row_columns)
+
+
+    @classmethod
+    def psql_to_obj(cls, file_path='', text='', columns=None,
+                   remove_empty_rows=True, key_on=None,
+                   row_columns=None, deliminator=' | ', eval_cells=True):
+        """
+        This will convert a csv file or csv text into a seaborn table
+        and return it
+        :param file_path: str of the path to the file
+        :param text: str of the csv text
+        :param columns: list of str of columns to use
+        :param row_columns: list of str of columns in data but not to use
+        :param remove_empty_rows: bool if True will remove empty rows
+        :param key_on: list of str of columns to key on
+        :param deliminator: str to use as a deliminator
+        :param eval_cells: bool if True will try to evaluate numbers
+        :return: SeabornTable
+        """
+        text = cls._get_lines(file_path, text)
+        if len(text) == 1:
+            text = text[0].split('\r')
+
+        if not text[1].replace('+', '').replace('-','').strip():
+            text.pop(1) # get rid of bar
 
         eval_cell = cls._eval_cell if eval_cells else lambda x: x
         list_of_list = [[eval_cell(cell) for cell in row.split(deliminator)]
@@ -472,6 +559,46 @@ class SeabornTable(object):
                for row in list_of_list]
 
         ret = [deliminator.join(row) for row in ret]
+        ret = tab + (u'\n' + tab).join(ret)
+        self._save_file(file_path, ret)
+        return ret
+
+    def obj_to_rst(self, file_path=None, deliminator='  ', tab=None):
+        tab = self.tab if tab is None else tab
+
+        list_of_list = [[self._safe_str(cell, quote_numbers=False,
+                                        deliminator=' ')
+                         for cell in row] for row in self]
+        list_of_list = [self.columns] + list_of_list
+
+        column_widths = self._get_column_widths(list_of_list, padding=0)
+        ret = [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
+               for row in list_of_list]
+        column_widths = self._get_column_widths(list_of_list, padding=0,
+                                                pad_last_column=True)
+        bar = deliminator.join(['='*width for width in column_widths])
+        ret = [deliminator.join(row) for row in ret]
+        ret = [bar, ret[0], bar] + ret[1:] + [bar]
+        ret = tab + (u'\n' + tab).join(ret)
+        self._save_file(file_path, ret)
+        return ret
+
+    def obj_to_psql(self, file_path=None, deliminator=' | ', tab=None):
+        tab = self.tab if tab is None else tab
+
+        list_of_list = [[self._safe_str(cell, quote_numbers=False)
+                         for cell in row] for row in self]
+        list_of_list = [self.columns] + list_of_list
+
+        column_widths = self._get_column_widths(list_of_list, padding=0)
+        ret = [[' '+cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
+               for row in list_of_list]
+
+        ret = [deliminator.join(row) for row in ret]
+        column_widths = self._get_column_widths(list_of_list, padding=3,
+                                                pad_last_column=True)
+        bar = ('+'.join(['-'*width for width in column_widths]))[1:]
+        ret.insert(1, bar)
         ret = tab + (u'\n' + tab).join(ret)
         self._save_file(file_path, ret)
         return ret
@@ -619,6 +746,10 @@ class SeabornTable(object):
             self.obj_to_grid(file_path=file_path)
         elif file_path.endswith('.json'):
             self.obj_to_json(file_path=file_path)
+        elif file_path.endswith('.rst'):
+            self.obj_to_rst(file_path=file_path)
+        elif file_path.endswith('.psql'):
+            self.obj_to_psql(file_path=file_path)
         else:
             raise Exception('Unknown file type: %s' % file_path)
 
@@ -1114,11 +1245,14 @@ class SeabornTable(object):
         return widths
 
     @classmethod
-    def _safe_str(cls, cell, quote_numbers=True, repr_line_break=False):
+    def _safe_str(cls, cell, quote_numbers=True, repr_line_break=False,
+                  deliminator=None):
         """
         :param cell: obj to turn in to a string
         :param quote_numbers: if True numbers will be quoted
-        :param repr_line_break: if True will replace \n with \\n"""
+        :param repr_line_break: if True will replace \n with \\n
+        :param deliminator: if the deliminator is in the cell it will be quoted
+        """
         if cell is None:
             return ''
 
@@ -1127,6 +1261,8 @@ class SeabornTable(object):
             if (ret.replace(u'.', u'').isdigit() or
                         u'"' in ret or ret in [u'False', u'True']):
                 ret = u'"%s"' % ret
+        elif deliminator is not None and deliminator in ret:
+            ret = u'"%s"' % ret
 
         if repr_line_break:
             ret = ret.replace(u'\n', u'\\n')

@@ -23,7 +23,7 @@ class FileConversionTest(unittest.TestCase):
 
     def cmp_file(self, source, ext):
         self.assertTrue(os.path.exists(file(source, ext)),
-                        'File not created: %s'%file(source, ext))
+                        'File not created: %s' % file(source, ext))
         with open(file('data', ext), 'rb') as fp:
             expected = fp.read().decode('utf-8').replace('\r', '').split('\n')
 
@@ -52,6 +52,12 @@ class FileConversionTest(unittest.TestCase):
     def test_txt_to_json(self):
         self.file_conversion('txt', 'json')
 
+    def test_txt_to_rst(self):
+        self.file_conversion('txt', 'rst')
+
+    def test_txt_to_psql(self):
+        self.file_conversion('txt', 'psql')
+
     def test_csv_to_md(self):
         self.file_conversion('csv', 'md')
 
@@ -69,6 +75,12 @@ class FileConversionTest(unittest.TestCase):
 
     def test_csv_to_json(self):
         self.file_conversion('csv', 'json')
+
+    def test_csv_to_rst(self):
+        self.file_conversion('csv', 'rst')
+
+    def test_csv_to_psql(self):
+        self.file_conversion('csv', 'psql')
 
     def test_md_to_md(self):
         self.file_conversion('md', 'md')
@@ -88,6 +100,12 @@ class FileConversionTest(unittest.TestCase):
     def test_md_to_json(self):
         self.file_conversion('md', 'json')
 
+    def test_md_to_rst(self):
+        self.file_conversion('md', 'rst')
+
+    def test_md_to_psql(self):
+        self.file_conversion('md', 'psql')
+
     def test_grid_to_md(self):
         self.file_conversion('grid', 'md')
 
@@ -106,6 +124,12 @@ class FileConversionTest(unittest.TestCase):
     def test_grid_to_json(self):
         self.file_conversion('grid', 'json')
 
+    def test_grid_to_rst(self):
+        self.file_conversion('grid', 'rst')
+
+    def test_grid_to_psql(self):
+        self.file_conversion('grid', 'psql')
+
     def test_json_to_md(self):
         self.file_conversion('json', 'md')
 
@@ -123,6 +147,60 @@ class FileConversionTest(unittest.TestCase):
 
     def test_json_to_grid(self):
         self.file_conversion('json', 'grid')
+
+    def test_json_to_rst(self):
+        self.file_conversion('json', 'rst')
+
+    def test_json_to_psql(self):
+        self.file_conversion('json', 'psql')
+
+    def test_rst_to_md(self):
+        self.file_conversion('rst', 'md')
+
+    def test_rst_to_json(self):
+        self.file_conversion('rst', 'json')
+
+    def test_rst_to_csv(self):
+        self.file_conversion('rst', 'csv')
+
+    def test_rst_to_html(self):
+        self.file_conversion('rst', 'html')
+
+    def test_rst_to_txt(self):
+        self.file_conversion('rst', 'txt')
+
+    def test_rst_to_grid(self):
+        self.file_conversion('rst', 'grid')
+
+    def test_rst_to_rst(self):
+        self.file_conversion('rst', 'rst')
+
+    def test_rst_to_psql(self):
+        self.file_conversion('rst', 'psql')
+
+    def test_psql_to_md(self):
+        self.file_conversion('psql', 'md')
+
+    def test_psql_to_json(self):
+        self.file_conversion('psql', 'json')
+
+    def test_psql_to_csv(self):
+        self.file_conversion('psql', 'csv')
+
+    def test_psql_to_html(self):
+        self.file_conversion('psql', 'html')
+
+    def test_psql_to_txt(self):
+        self.file_conversion('psql', 'txt')
+
+    def test_psql_to_grid(self):
+        self.file_conversion('psql', 'grid')
+
+    def test_psql_to_rst(self):
+        self.file_conversion('psql', 'rst')
+
+    def test_psql_to_psql(self):
+        self.file_conversion('psql', 'psql')
 
 
 if __name__ == '__main__':
