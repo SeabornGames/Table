@@ -7,11 +7,11 @@ Changes in 2.2.0
 
 * Added known format as ``KNOWN_FORMATS``.
 
-* Added ability to force write strings of numbers without quotes, through the
-  ``quote_numbers`` argument.
+* Added ability to force writing strings of numbers and bools without quotes,
+  through the ``quote_numbers`` argument.
 
-* Added ability to not evaluate numbers without quotes upon read, through the
-  ``eval_cells11 argument.
+* Added ability to not evaluate numbers and bools without quotes upon read,
+  through the ``eval_cells`` argument.
 
 
 Changes in 2.1.0
