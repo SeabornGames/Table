@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from seaborn_table.table import SeabornTable
+from seaborn_table.table import SeabornTable, UNICODE, BASESTRING
 
 PATH = os.path.split(os.path.abspath(__file__))[0]
 
@@ -10,13 +10,13 @@ class QuoteNumbersTest(unittest.TestCase):
     def quote_number_test(self, source):
         file_path = os.path.join(PATH, 'data', 'test_file.rst')
         table = SeabornTable.file_to_obj(file_path=file_path)
-        table.map(lambda x: str(x))
+        table.map(lambda x: UNICODE(x))
         result_path = os.path.join(PATH, 'test_file.%s' % source)
         result = table.obj_to_file(result_path, quote_numbers=False)
         expected_file = os.path.join(PATH, 'data', 'expected',
                                      'test_file.%s'%source)
-        with open(expected_file, 'r') as fp:
-            self.assertEqual(fp.read().replace('\r', ''),
+        with open(expected_file, 'rb') as fp:
+            self.assertEqual(fp.read().decode('utf-8').replace('\r', ''),
                              result.replace('\r', ''))
         os.remove(result_path)
 
@@ -29,9 +29,8 @@ class QuoteNumbersTest(unittest.TestCase):
     def test_quote_numbers_txt(self):
         self.quote_number_test('txt')
 
-    # XXX remove after implementing html_to_obj
-    # def test_quote_numbers_html(self):
-    #     self.quote_number_test('html')
+    def test_quote_numbers_html(self):
+        self.quote_number_test('html')
 
     def test_quote_numbers_grid(self):
         self.quote_number_test('grid')
@@ -50,7 +49,7 @@ class EvalCellsFalseTest(unittest.TestCase):
     def eval_cells_test(self, source):
         file_path = os.path.join(PATH, 'data', 'test_file.%s' % source)
         table = SeabornTable.file_to_obj(eval_cells=False, file_path=file_path)
-        assert isinstance(table[0]['TU'], str)
+        assert isinstance(table[0]['TU'], BASESTRING)
 
     def test_eval_cells_false_md(self):
         self.eval_cells_test('md')

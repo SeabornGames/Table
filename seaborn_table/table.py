@@ -711,15 +711,11 @@ class SeabornTable(object):
         if not quote_numbers:
             for row in data:
                 for k, v in row.items():
-                    if isinstance(v, str) and (v.replace('.', '').isdigit() or
-                                                       v in ['True', 'False']):
-                        while v.startswith('0') and v != '0':
-                            v = v[1:]
-                        row[k] = eval(v)
+                    if isinstance(v, (bool, int, float)):
+                        row[k] = str(row[k])
         ret = json.dumps(data, indent=indent, sort_keys=sort_keys)
         if sys.version_info[0] == 2:
             ret = ret.replace(', \n', ',\n')
-
         self._save_file(file_path, ret)
         return ret
 
