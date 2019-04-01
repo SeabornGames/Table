@@ -36,7 +36,12 @@ class ExampleTableTest(unittest.TestCase):
         if isinstance(answer, bytes):
             answer = answer.decode('utf8')
         cls.answer = answer.strip().replace('\n            ', '\n')
-        cls.list_of_list = [[r.strip() for r in row.split('|')[1:]]
+        def clean(cell):
+            cell = cell.strip()
+            if cell.replace('.', '').isdigit():
+                return eval(cell)
+            return cell
+        cls.list_of_list = [[clean(r) for r in row.split('|')[1:]]
                             for row in cls.answer.split('\n')]
         cls.list_of_list[0][4] += ' '
 
@@ -98,7 +103,7 @@ class ExampleTableTest(unittest.TestCase):
 
     def test_list_of_list(self):
         table = SeabornTable(self.list_of_list, deliminator=' | ',
-                             tab='| ')
+                             tab='| ', )
         log.debug('\nAnswer:\n%s\n\nResult:\n%s\n\n' % (
             self.answer, str(table)))
         self.assertEqual(self.answer, str(table))
