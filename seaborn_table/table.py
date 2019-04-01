@@ -335,7 +335,7 @@ class SeabornTable(object):
         raise Exception('Unknown file type in : %s' % file_path)
 
     @classmethod
-    def txt_to_obj(cls, file_path='', text='', columns=None,
+    def txt_to_obj(cls, file_path=None, text='', columns=None,
                    remove_empty_rows=True, key_on=None,
                    row_columns=None, deliminator='\t', eval_cells=True):
         """
@@ -357,7 +357,7 @@ class SeabornTable(object):
                               deliminator=deliminator, eval_cells=eval_cells)
 
     @classmethod
-    def str_to_obj(cls, file_path='', text='', columns=None,
+    def str_to_obj(cls, file_path=None, text='', columns=None,
                    remove_empty_rows=True, key_on=None,
                    row_columns=None, deliminator='\t', eval_cells=True):
         """
@@ -389,7 +389,7 @@ class SeabornTable(object):
                                row_columns=row_columns)
 
     @classmethod
-    def rst_to_obj(cls, file_path='', text='', columns=None,
+    def rst_to_obj(cls, file_path=None, text='', columns=None,
                    remove_empty_rows=True, key_on=None,
                    row_columns=None, deliminator=' ', eval_cells=True):
         """
@@ -419,7 +419,7 @@ class SeabornTable(object):
                                row_columns=row_columns)
 
     @classmethod
-    def psql_to_obj(cls, file_path='', text='', columns=None,
+    def psql_to_obj(cls, file_path=None, text='', columns=None,
                     remove_empty_rows=True, key_on=None,
                     row_columns=None, deliminator=' | ', eval_cells=True):
         """
