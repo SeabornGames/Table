@@ -10,7 +10,7 @@
     "TU": 1,
     "Player": "Ben",
     "Role": "Judge",
-    "Action": "True",
+    "Action": true,
     "Target": "Inspector"
   },
   {
@@ -24,7 +24,7 @@
     "TU": 1,
     "Player": "Dan",
     "Role": "Thief",
-    "Action": "False",
+    "Action": false,
     "Target": "Ann"
   },
   {

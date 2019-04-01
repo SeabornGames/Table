@@ -122,11 +122,14 @@ class SeabornTable(object):
     def list_to_obj(cls, list_, columns, row_columns=None, tab='',
                     key_on=None):
         """
-        :param list_: list of list or list of dictionary to use as the source
-        :param columns: list of strings to label the columns on print out
+        :param list_:       list of list or list of dictionary to use as the
+                            source
+        :param columns:     list of strings to label the columns when converting
+                            to str
         :param row_columns: list of columns in the actually data
-        :param tab: str of the tab to use before the row on printout
-        :param key_on: str of the column to key each row on
+        :param tab:         str of the tab to use before the row when converting
+                            to str
+        :param key_on:      str of the column to key each row on
         :return: SeabornTable
         """
         if getattr(list_[0], 'keys', None) and not isinstance(list_[0], dict):
@@ -236,7 +239,7 @@ class SeabornTable(object):
 
     @classmethod
     def _merge_quoted_cells(cls, lines, deliminator, remove_empty_rows,
-                            eval_cells):
+                            eval_cells, excel_boolean=True):
         ret = []
         line_index = 0
         while line_index < len(lines):
@@ -255,7 +258,8 @@ class SeabornTable(object):
                     else:
                         cell += deliminator + cells[i]
                     i += 1
-                cell = cls._eval_cell(cell, True, _eval=eval_cells)
+                cell = cls._eval_cell(cell, True, _eval=eval_cells,
+                                      excel_boolean=excel_boolean)
                 row.append(cell)
             if not remove_empty_rows or True in [bool(r) for r in row]:
                 ret.append(row)
@@ -409,7 +413,8 @@ class SeabornTable(object):
                 text.pop(i)  # get rid of bar
         lines = [row.split() for row in text]
         list_of_list = cls._merge_quoted_cells(lines, deliminator,
-                                               remove_empty_rows, eval_cells)
+                                               remove_empty_rows, eval_cells,
+                                               excel_boolean=False)
         return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns,
                                row_columns=row_columns)
 
@@ -559,7 +564,8 @@ class SeabornTable(object):
         cls._save_file(file_path, ret)
         return ret
 
-    def obj_to_md(self, file_path=None, title_columns=False, quote_numbers=True):
+    def obj_to_md(self, file_path=None, title_columns=False,
+                  quote_numbers=True):
         """
         This will return a str of a mark down text
         :param title_columns: bool if True will title all headers
@@ -705,7 +711,8 @@ class SeabornTable(object):
         if not quote_numbers:
             for row in data:
                 for k, v in row.items():
-                    if isinstance(v, str) and v.replace('.', '').isdigit():
+                    if isinstance(v, str) and (v.replace('.', '').isdigit() or
+                                                       v in ['True', 'False']):
                         while v.startswith('0') and v != '0':
                             v = v[1:]
                         row[k] = eval(v)
@@ -845,7 +852,7 @@ class SeabornTable(object):
     def obj_to_file(self, file_path, quote_numbers=True):
         for file_type in self.KNOWN_FORMATS:
             if file_path.endswith('.%s' % file_type):
-                obj_to_type = getattr(self, 'obj_to_%s'%file_type)
+                obj_to_type = getattr(self, 'obj_to_%s' % file_type)
                 return obj_to_type(file_path=file_path,
                                    quote_numbers=quote_numbers)
         raise Exception('Unknown file type: %s' % file_path)
@@ -1353,10 +1360,10 @@ class SeabornTable(object):
             return ''
 
         ret = str(cell) if not isinstance(cell, BASESTRING) else cell
-
         if isinstance(cell, BASESTRING):
             if quote_numbers and (ret.replace(u'.', u'').isdigit() or
-                                          ret in [u'False', u'True']):
+                                          ret in [u'False', u'True', 'False',
+                                                  'True']):
                 ret = u'"%s"' % ret
             elif u'"' in ret or (deliminator and deliminator in ret):
                 ret = u'"%s"' % ret
@@ -1403,16 +1410,25 @@ class SeabornTable(object):
         return ret
 
     @staticmethod
-    def _eval_cell(cell, quote_replacement=False, _eval=True):
+    def _eval_cell(cell, quote_replacement=False, _eval=True,
+                   excel_boolean=False):
         cell = cell.strip()
         if cell and cell[0] == '"' and cell[-1] == '"':
             cell = cell[1:-1]
             if quote_replacement:
                 cell = cell.replace('""', '"')
-        elif _eval and cell.replace('.', '').isdigit():
-            while cell.startswith('0') and cell != '0':
-                cell = cell[1:]
-            cell = eval(cell)
+        else:
+            if excel_boolean and cell in [u'TRUE', 'TRUE']:
+                cell = True
+            elif excel_boolean and cell in [u'FALSE', 'FALSE']:
+                cell = False
+            elif not excel_boolean and cell in ['True', 'False', u'True',
+                                                u'False']:
+                cell = eval(cell)
+            elif _eval and cell.replace('.', '').isdigit():
+                while cell.startswith('0') and cell != '0':
+                    cell = cell[1:]
+                cell = eval(cell)
         return cell
 
     @staticmethod
@@ -1533,11 +1549,12 @@ class SeabornTable(object):
 
         if cell is None:
             return '%s/>' % head
-        if '\n' not in cls._safe_str(cell):
+
+        cell = cls._safe_str(cell, quote_numbers=quote_numbers)
+        if '\n' not in cell:
             return '%s>%s</th>' % (head, cell)
         return '%s align="left">%s</th>' % (
-            head, cls._safe_str(cell, quote_numbers=quote_numbers
-                                ).replace('\n', '<br>'))
+            head, cell.replace('\n', '<br>'))
 
     def _html_link_cells(self):
         """

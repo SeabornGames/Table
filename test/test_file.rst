@@ -2,9 +2,9 @@
 TU   Player  Role         Action                  Target
 ===  ======  ===========  ======================  ==========
 1    Ann     Executioner  None                    None
-1    Ben     Judge        "True"                  Inspector
+1    Ben     Judge        True                    Inspector
 1    Cal     Inspector    True                    Ann
-1    Dan     Thief        "False"                 Ann
+1    Dan     Thief        False                   Ann
 1    Ed      Reporter     False                   Cal
 1    Fin     Trader       Class                   "Cal, Ed"
 2    Ed      Inspector    Class                   Dan
