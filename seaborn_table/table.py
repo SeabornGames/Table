@@ -238,34 +238,6 @@ class SeabornTable(object):
         return ret
 
     @classmethod
-    def _merge_quoted_cells(cls, lines, deliminator, remove_empty_rows,
-                            eval_cells, excel_boolean=True):
-        ret = []
-        line_index = 0
-        while line_index < len(lines):
-            cells = lines[line_index]
-            line_index += 1
-            i = 0
-            row = []
-            while i < len(cells):
-                cell = cells[i]  # XXX this is slow in pycharm debug
-                i += 1
-                while cell.count('"') % 2:
-                    if i >= len(cells):  # excel causes this to happen
-                        cells += lines[line_index]
-                        cell += "\n" + cells[i]  # add the line break back in
-                        line_index += 1
-                    else:
-                        cell += deliminator + cells[i]
-                    i += 1
-                cell = cls._eval_cell(cell, True, _eval=eval_cells,
-                                      excel_boolean=excel_boolean)
-                row.append(cell)
-            if not remove_empty_rows or True in [bool(r) for r in row]:
-                ret.append(row)
-        return ret
-
-    @classmethod
     def csv_to_obj(cls, file_path=None, text='', columns=None,
                    remove_empty_rows=True, key_on=None, deliminator=',',
                    eval_cells=True):
@@ -453,7 +425,7 @@ class SeabornTable(object):
     def html_to_obj(cls, file_path=None, text='', columns=None,
                     key_on=None, ignore_code_blocks=True, eval_cells=True):
         """
-        This will convert a psql file or text to a seaborn table
+        This will convert a html file or text to a seaborn table
         :param file_path: str of the path to the file
         :param text: str of the csv text
         :param columns: list of str of columns to use
@@ -549,6 +521,7 @@ class SeabornTable(object):
     def objs_to_mark_down(cls, tables, file_path=None, keys=None,
                           pretty_columns=True, quote_numbers=True):
         """
+        This will return a str of multiple mark down tables.
         :param tables:         dict of {str <name>:SeabornTable}
         :param file_path:      str of the path to the file
         :param keys:           list of str of the order of keys to use
@@ -567,7 +540,7 @@ class SeabornTable(object):
     def obj_to_md(self, file_path=None, title_columns=False,
                   quote_numbers=True):
         """
-        This will return a str of a mark down text
+        This will return a str of a mark down tables.
         :param title_columns: bool if True will title all headers
         :param file_path: str of the path to the file to write to
         :param quote_numbers:  bool if True will quote numbers that are strings
@@ -580,7 +553,7 @@ class SeabornTable(object):
     def obj_to_mark_down(self, file_path=None, title_columns=False,
                          quote_numbers=True):
         """
-        This will return a str of a mark down text
+        This will return a str of a mark down table.
         :param title_columns: bool if True will title all headers
         :param file_path: str of the path to the file to write to
         :param quote_numbers:  bool if True will quote numbers that are strings
@@ -602,6 +575,7 @@ class SeabornTable(object):
     def obj_to_txt(self, file_path=None, deliminator=None, tab=None,
                    quote_numbers=True):
         """
+        This will return a simple str table.
         :param file_path:      str of the path to the file
         :param keys:           list of str of the order of keys to use
         :param tab:            string of offset of the table
@@ -614,6 +588,7 @@ class SeabornTable(object):
     def obj_to_str(self, file_path=None, deliminator=None, tab=None,
                    quote_numbers=True):
         """
+        This will return a simple str table.
         :param file_path:      str of the path to the file
         :param keys:           list of str of the order of keys to use
         :param tab:            string of offset of the table
@@ -640,6 +615,7 @@ class SeabornTable(object):
     def obj_to_rst(self, file_path=None, deliminator='  ', tab=None,
                    quote_numbers=True):
         """
+        This will return a str of a rst table.
         :param file_path:      str of the path to the file
         :param keys:           list of str of the order of keys to use
         :param tab:            string of offset of the table
@@ -668,6 +644,7 @@ class SeabornTable(object):
     def obj_to_psql(self, file_path=None, deliminator=' | ', tab=None,
                     quote_numbers=True):
         """
+        This will return a str of a psql table.
         :param file_path:      str of the path to the file
         :param keys:           list of str of the order of keys to use
         :param tab:            string of offset of the table
@@ -697,6 +674,7 @@ class SeabornTable(object):
     def obj_to_json(self, file_path=None, indent=2, sort_keys=False,
                     quote_numbers=True):
         """
+        This will return a str of a json list.
         :param file_path:      path to data file, defaults to
                                self's contents if left alone
         :param indent:         int if set to 2 will indent to spaces and include
@@ -722,6 +700,7 @@ class SeabornTable(object):
     def obj_to_grid(self, file_path=None, delim=None, tab=None,
                     quote_numbers=True):
         """
+        This will return a str of a grid table.
         :param file_path:      path to data file, defaults to
                                self's contents if left alone
         :param delim:          dict of deliminators, defaults to
@@ -1077,6 +1056,34 @@ class SeabornTable(object):
             if hasattr(self._parameters.get(c, ''), '__call__'):
                 # noinspection PyTypeChecker
                 self.set_column(c, self._parameters[c])
+
+    @classmethod
+    def _merge_quoted_cells(cls, lines, deliminator, remove_empty_rows,
+                            eval_cells, excel_boolean=True):
+        ret = []
+        line_index = 0
+        while line_index < len(lines):
+            cells = lines[line_index]
+            line_index += 1
+            i = 0
+            row = []
+            while i < len(cells):
+                cell = cells[i]  # XXX this is slow in pycharm debug
+                i += 1
+                while cell.count('"') % 2:
+                    if i >= len(cells):  # excel causes this to happen
+                        cells += lines[line_index]
+                        cell += "\n" + cells[i]  # add the line break back in
+                        line_index += 1
+                    else:
+                        cell += deliminator + cells[i]
+                    i += 1
+                cell = cls._eval_cell(cell, True, _eval=eval_cells,
+                                      excel_boolean=excel_boolean)
+                row.append(cell)
+            if not remove_empty_rows or True in [bool(r) for r in row]:
+                ret.append(row)
+        return ret
 
     @classmethod
     def _get_lines(cls, file_path=None, text='', replace=None,
