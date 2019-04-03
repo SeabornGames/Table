@@ -1,3 +1,19 @@
+Changes in 2.2.0
+================
+
+* Added file format psql.
+
+* Added file format rst.
+
+* Added known format as ``KNOWN_FORMATS``.
+
+* Added ability to force writing strings of numbers and bools without quotes,
+  through the ``quote_numbers`` argument.
+
+* Added ability to not evaluate numbers and bools without quotes upon read,
+  through the ``eval_cells`` argument.
+
+
 Changes in 2.1.0
 ================
 
