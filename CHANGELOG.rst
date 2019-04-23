@@ -8,6 +8,8 @@ Changes in 3.0.0
 
 * Reordered some of the method args to make the calls more consistent.
 
+* Fixed extra space in psql columns.
+
 
 Changes in 2.3.0
 ================

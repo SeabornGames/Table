@@ -657,15 +657,21 @@ class SeabornTable(object):
                                                quote_empty_str=quote_empty_str,
                                                deliminator=deliminator)
 
+        for row in list_of_list:
+            row[0] = ' '+row[0]
         column_widths = self._get_column_widths(list_of_list, padding=0)
-        ret = [
-            [' ' + cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
-            for row in list_of_list]
+        if len(column_widths) > 1:
+            column_widths[-1] += 1
+
+        ret = [[cell.center(column_widths[i])
+                  for i, cell in enumerate(list_of_list[0])]]
+        ret += [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
+                for row in list_of_list[1:]]
 
         ret = [deliminator.join(row) for row in ret]
         column_widths = self._get_column_widths(list_of_list, padding=3,
                                                 pad_last_column=True)
-        bar = ('+'.join(['-' * width for width in column_widths]))[1:]
+        bar = ('+'.join(['-' * (width-1) for width in column_widths]))[1:]
         ret.insert(1, bar)
         ret = tab + (u'\n' + tab).join(ret)
         self._save_file(file_path, ret)
