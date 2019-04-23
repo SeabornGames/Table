@@ -601,11 +601,8 @@ class SeabornTable(object):
         deliminator = self.deliminator if deliminator is None \
             else deliminator
         tab = self.tab if tab is None else tab
-
-        list_of_list = [[self._safe_str(row[col], quote_numbers=quote_numbers,
-                                        quote_empty_str=quote_empty_str)
-                         for col in self.columns] for row in self]
-        list_of_list = [self.columns] + list_of_list
+        list_of_list = self._safe_list_of_list(quote_numbers=quote_numbers,
+                                               quote_empty_str=quote_empty_str)
 
         column_widths = self._get_column_widths(list_of_list, padding=0)
         ret = [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
@@ -617,21 +614,20 @@ class SeabornTable(object):
         return ret
 
     def obj_to_rst(self, file_path=None, deliminator='  ', tab=None,
-                   quote_numbers=True):
+                   quote_numbers=True, quote_empty_str=False):
         """
         This will return a str of a rst table.
-        :param file_path:      str of the path to the file
-        :param keys:           list of str of the order of keys to use
-        :param tab:            string of offset of the table
-        :param quote_numbers:  bool if True will quote numbers that are strings
-        :return:               str of the converted markdown tables
+        :param file_path:       str of the path to the file
+        :param keys:            list of str of the order of keys to use
+        :param tab:             string of offset of the table
+        :param quote_numbers:   bool if True will quote numbers that are strings
+        :param quote_empty_str: bool if True will quote empty strings
+        :return:                str of the converted markdown tables
         """
         tab = self.tab if tab is None else tab
-
-        list_of_list = [[self._safe_str(cell, quote_numbers=quote_numbers,
-                                        deliminator=' ')
-                         for cell in row] for row in self]
-        list_of_list = [self.columns] + list_of_list
+        list_of_list = self._safe_list_of_list(quote_numbers=quote_numbers,
+                                               quote_empty_str=quote_empty_str,
+                                               deliminator=' ')
 
         column_widths = self._get_column_widths(list_of_list, padding=0)
         ret = [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
@@ -646,20 +642,20 @@ class SeabornTable(object):
         return ret
 
     def obj_to_psql(self, file_path=None, deliminator=' | ', tab=None,
-                    quote_numbers=True):
+                    quote_numbers=True, quote_empty_str=False):
         """
         This will return a str of a psql table.
-        :param file_path:      str of the path to the file
-        :param keys:           list of str of the order of keys to use
-        :param tab:            string of offset of the table
-        :param quote_numbers:  bool if True will quote numbers that are strings
-        :return:               str of the converted markdown tables
+        :param file_path:       str of the path to the file
+        :param keys:            list of str of the order of keys to use
+        :param tab:             string of offset of the table
+        :param quote_numbers:   bool if True will quote numbers that are strings
+        :param quote_empty_str: bool if True will quote empty strings
+        :return:                str of the converted markdown tables
         """
         tab = self.tab if tab is None else tab
-
-        list_of_list = [[self._safe_str(cell, quote_numbers=quote_numbers)
-                         for cell in row] for row in self]
-        list_of_list = [self.columns] + list_of_list
+        list_of_list = self._safe_list_of_list(quote_numbers=quote_numbers,
+                                               quote_empty_str=quote_empty_str,
+                                               deliminator=deliminator)
 
         column_widths = self._get_column_widths(list_of_list, padding=0)
         ret = [
@@ -702,17 +698,18 @@ class SeabornTable(object):
         return ret
 
     def obj_to_grid(self, file_path=None, delim=None, tab=None,
-                    quote_numbers=True):
+                    quote_numbers=True, quote_empty_str=False):
         """
         This will return a str of a grid table.
-        :param file_path:      path to data file, defaults to
-                               self's contents if left alone
-        :param delim:          dict of deliminators, defaults to
-                               obj_to_str's method:
-        :param tab:            string of offset of the table
-        :param quote_numbers:  bool if True will quote numbers that are strings
-        :return:               string representing the grid formation
-                               of the relevant data
+        :param file_path:       path to data file, defaults to
+                                self's contents if left alone
+        :param delim:           dict of deliminators, defaults to
+                                obj_to_str's method:
+        :param tab:             string of offset of the table
+        :param quote_numbers:   bool if True will quote numbers that are strings
+        :param quote_empty_str: bool if True will quote empty strings
+        :return:                string representing the grid formation
+                                of the relevant data
         """
 
         div_delims = {"top": ['top left corner', 'top intersect',
@@ -731,9 +728,8 @@ class SeabornTable(object):
 
         tab = self.tab if tab is None else tab
 
-        list_of_list = [[self._safe_str(cell, quote_numbers=quote_numbers)
-                         for cell in row] for row in self]
-        list_of_list = [self.columns] + list_of_list
+        list_of_list = self._safe_list_of_list(quote_numbers=quote_numbers,
+                                               quote_empty_str=quote_empty_str)
 
         column_widths = self._get_column_widths(list_of_list,
                                                 padding=0, pad_last_column=True)
@@ -759,15 +755,16 @@ class SeabornTable(object):
         self._save_file(file_path, ret)
         return ret
 
-    def obj_to_csv(self, quote_everything=False, space_columns=True,
-                   quote_numbers=True, file_path=None):
+    def obj_to_csv(self, file_path=None, quote_everything=False,
+                   space_columns=True, quote_numbers=True):
         """
         This will return a str of a csv text that is friendly to excel
+        :param file_path:        str to the path
         :param quote_everything: bool if True will quote everything if it needs
-            it or not, this is so it looks pretty in excel.
-        :param quote_numbers:  bool if True will quote numbers that are strings
-        :param space_columns: bool if True it will align columns with spaces
-        :param file_path: str to the path
+                                 it or not, this is so it looks pretty in excel.
+        :param quote_numbers:    bool if True will quote numbers that are
+                                 strings
+        :param space_columns:    bool if True it will align columns with spaces
         :return: str
         """
         csv = [[self._excel_cell(cell, quote_everything, quote_numbers)
@@ -790,20 +787,21 @@ class SeabornTable(object):
         self._save_file(file_path, ret)
         return ret
 
-    def obj_to_html(self, tab='', border=1, cell_padding=5, cell_spacing=1,
-                    border_color='black', align='center', row_span=None,
-                    quote_numbers=True, file_path=None):
+    def obj_to_html(self, file_path=None, tab='', border=1, cell_padding=5,
+                    cell_spacing=1, border_color='black', align='center',
+                    row_span=None, quote_numbers=True, quote_empty_str=False):
         """
         This will return a str of an html table.
-        :param tab: str to insert before each line e.g. '    '
-        :param border: int of the thickness of the table lines
-        :param cell_padding: int of the padding for the cells
-        :param cell_spacing: int of the spacing for hte cells
-        :param border_color: str of the color for the border
-        :param align: str for cell alignment, center, left, right
-        :param row_span: list of rows to span
-        :param quote_numbers:  bool if True will quote numbers that are strings
-        :param file_path: str for path to the file
+        :param file_path:       str for path to the file
+        :param tab:             str to insert before each line e.g. '    '
+        :param border:          int of the thickness of the table lines
+        :param cell_padding:    int of the padding for the cells
+        :param cell_spacing:    int of the spacing for hte cells
+        :param border_color:    str of the color for the border
+        :param align:           str for cell alignment, center, left, right
+        :param row_span:        list of rows to span
+        :param quote_numbers:   bool if True will quote numbers that are strings
+        :param quote_empty_str: bool if True will quote empty strings
         :return: str of html code
         """
         html_table = self._html_link_cells()
@@ -960,7 +958,8 @@ class SeabornTable(object):
             index = self._column_index[key]
         for row in self.table:
             row.pop(index)
-        self.row_columns = self.row_columns[:index]+self.row_columns[index+1:]
+        self.row_columns = self.row_columns[:index] + self.row_columns[
+                                                      index + 1:]
         self.pop_column(key)
 
     def filter_by(self, **kwargs):
@@ -1356,6 +1355,11 @@ class SeabornTable(object):
         if not pad_last_column and widths:
             widths[-1] = 0
         return widths
+
+    def _safe_list_of_list(self, *args, **kwargs):
+        list_of_list = [[self._safe_str(row[col], *args, **kwargs)
+                         for col in self.columns] for row in self]
+        return [self.columns] + list_of_list
 
     @classmethod
     def _safe_str(cls, cell, quote_numbers=True, repr_line_break=False,
