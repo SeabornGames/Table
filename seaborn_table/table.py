@@ -573,33 +573,37 @@ class SeabornTable(object):
         return ret
 
     def obj_to_txt(self, file_path=None, deliminator=None, tab=None,
-                   quote_numbers=True):
+                   quote_numbers=True, quote_empty_str=False):
         """
         This will return a simple str table.
-        :param file_path:      str of the path to the file
-        :param keys:           list of str of the order of keys to use
-        :param tab:            string of offset of the table
-        :param quote_numbers:  bool if True will quote numbers that are strings
-        :return:               str of the converted markdown tables
+        :param file_path:       str of the path to the file
+        :param keys:            list of str of the order of keys to use
+        :param tab:             string of offset of the table
+        :param quote_numbers:   bool if True will quote numbers that are strings
+        :param quote_empty_str: bool if True will quote empty strings
+        :return:                str of the converted markdown tables
         """
         return self.obj_to_str(file_path=file_path, deliminator=deliminator,
-                               tab=tab, quote_numbers=quote_numbers)
+                               tab=tab, quote_numbers=quote_numbers,
+                               quote_empty_str=quote_empty_str)
 
     def obj_to_str(self, file_path=None, deliminator=None, tab=None,
-                   quote_numbers=True):
+                   quote_numbers=True, quote_empty_str=False):
         """
         This will return a simple str table.
-        :param file_path:      str of the path to the file
-        :param keys:           list of str of the order of keys to use
-        :param tab:            string of offset of the table
-        :param quote_numbers:  bool if True will quote numbers that are strings
-        :return:               str of the converted markdown tables
+        :param file_path:       str of the path to the file
+        :param keys:            list of str of the order of keys to use
+        :param tab:             string of offset of the table
+        :param quote_numbers:   bool if True will quote numbers that are strings
+        :param quote_empty_str: bool if True will quote empty strings
+        :return:                str of the converted markdown tables
         """
         deliminator = self.deliminator if deliminator is None \
             else deliminator
         tab = self.tab if tab is None else tab
 
-        list_of_list = [[self._safe_str(cell, quote_numbers=quote_numbers)
+        list_of_list = [[self._safe_str(cell, quote_numbers=quote_numbers,
+                                        quote_empty_str=quote_empty_str)
                          for cell in row] for row in self]
         list_of_list = [self.columns] + list_of_list
 
@@ -1352,15 +1356,16 @@ class SeabornTable(object):
 
     @classmethod
     def _safe_str(cls, cell, quote_numbers=True, repr_line_break=False,
-                  deliminator=None):
+                  deliminator=None, quote_empty_str=False):
         """
         :param cell: obj to turn in to a string
         :param quote_numbers:  bool if True will quote numbers that are strings
         :param repr_line_break: if True will replace \n with \\n
         :param deliminator: if the deliminator is in the cell it will be quoted
+        :param quote_empty_str: bool if True will quote empty strings
         """
         if cell is None:
-            return ''
+            cell = ''
 
         ret = str(cell) if not isinstance(cell, BASESTRING) else cell
         if isinstance(cell, BASESTRING):
@@ -1370,6 +1375,8 @@ class SeabornTable(object):
                 ret = u'"%s"' % ret
             elif u'"' in ret or (deliminator and deliminator in ret):
                 ret = u'"%s"' % ret
+            elif quote_empty_str and cell == u'':
+                ret = u'""'
         if repr_line_break:
             ret = ret.replace(u'\n', u'\\n')
         return ret

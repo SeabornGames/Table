@@ -194,11 +194,24 @@ class ExampleTableTest(unittest.TestCase):
     def test_fancy(self):
         expected = SeabornTable.grid_to_obj(os.path.join(
             PATH,'data','test_file.grid'))
-        print(str(expected))
+        log.debug(str(expected))
         result = SeabornTable.mark_down_to_obj(
             os.path.join(PATH, 'data', 'test_file.md'))
 
         self.assertEqual(expected.obj_to_grid(), result.obj_to_grid())
+
+    def test_quote_empty_str(self):
+        table = SeabornTable([['aaa', 'a_b_c', 'c'],
+                              [1, None, ''],
+                              ['', None, 'Aida']])
+        answer = '''
+            aaa a_b_c c
+            1   ""    ""
+            ""  ""    Aida
+        '''.strip().replace('\n            ', '\n')
+        results = table.obj_to_str(quote_empty_str=True, deliminator=' ')
+        log.debug(results)
+        self.assertEqual(results, answer)
 
 
 if __name__ == '__main__':
