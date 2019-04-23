@@ -202,8 +202,8 @@ class ExampleTableTest(unittest.TestCase):
 
     def test_quote_empty_str(self):
         table = SeabornTable([['aaa', 'a_b_c', 'c'],
-                              [1, '', ''],
-                              ['', '', 'Aida']])
+                              [1, None, ''],
+                              ['', None, 'Aida']])
         answer = '''
             aaa a_b_c c
             1   ""    ""

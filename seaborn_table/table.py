@@ -1365,7 +1365,7 @@ class SeabornTable(object):
         :param quote_empty_str: bool if True will quote empty strings
         """
         if cell is None:
-            return ''
+            cell = ''
 
         ret = str(cell) if not isinstance(cell, BASESTRING) else cell
         if isinstance(cell, BASESTRING):
