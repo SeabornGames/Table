@@ -602,9 +602,9 @@ class SeabornTable(object):
             else deliminator
         tab = self.tab if tab is None else tab
 
-        list_of_list = [[self._safe_str(cell, quote_numbers=quote_numbers,
+        list_of_list = [[self._safe_str(row[col], quote_numbers=quote_numbers,
                                         quote_empty_str=quote_empty_str)
-                         for cell in row] for row in self]
+                         for col in self.columns] for row in self]
         list_of_list = [self.columns] + list_of_list
 
         column_widths = self._get_column_widths(list_of_list, padding=0)
@@ -953,12 +953,15 @@ class SeabornTable(object):
         :param key: str of the column to remove from every row in the table
         :return: None
         """
-        if not isinstance(key, int):
-            key = self._column_index[key]
+        if isinstance(key, int):
+            index = key
+            key = self.row_columns[key]
+        else:
+            index = self._column_index[key]
         for row in self.table:
-            row.pop(key)
-        self.row_columns = [i for i, c in enumerate(self.row_columns) if
-                            i + key]
+            row.pop(index)
+        self.row_columns = self.row_columns[:index]+self.row_columns[index+1:]
+        self.pop_column(key)
 
     def filter_by(self, **kwargs):
         """

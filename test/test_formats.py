@@ -14,7 +14,7 @@ class QuoteNumbersTest(unittest.TestCase):
         result_path = os.path.join(PATH, 'test_file.%s' % source)
         result = table.obj_to_file(result_path, quote_numbers=False)
         expected_file = os.path.join(PATH, 'data', 'expected',
-                                     'test_file.%s'%source)
+                                     'test_file.%s' % source)
         with open(expected_file, 'rb') as fp:
             self.assertEqual(fp.read().decode('utf-8').replace('\r', ''),
                              result.replace('\r', ''))
@@ -75,6 +75,49 @@ class EvalCellsFalseTest(unittest.TestCase):
 
     def test_eval_cells_false_psql(self):
         self.eval_cells_test('psql')
+
+
+class InsertPopRemoveColumnTest(unittest.TestCase):
+    maxDiff = None
+
+    def insert_pop_remove_column(self, source):
+        file_path = os.path.join(PATH, 'data', 'test_file.rst')
+        table = SeabornTable.file_to_obj(file_path=file_path)
+        table.insert(0, 'remove_column')
+        table.insert(None, 'pop_column')
+        table.pop_column('pop_column')
+        table.remove_column('remove_column')
+        result_path = os.path.join(PATH, 'test_file.%s' % source)
+        result = table.obj_to_file(result_path)
+        expected_file = os.path.join(PATH, 'data', 'test_file.%s' % source)
+        with open(expected_file, 'rb') as fp:
+            self.assertEqual(fp.read().decode('utf-8').replace('\r', ''),
+                             result.replace('\r', ''))
+        os.remove(result_path)
+
+    def test_insert_pop_remove_column_md(self):
+        self.insert_pop_remove_column('md')
+
+    def test_insert_pop_remove_column_csv(self):
+        self.insert_pop_remove_column('csv')
+
+    def test_insert_pop_remove_column_txt(self):
+        self.insert_pop_remove_column('txt')
+
+    def test_insert_pop_remove_column_html(self):
+        self.insert_pop_remove_column('html')
+
+    def test_insert_pop_remove_column_grid(self):
+        self.insert_pop_remove_column('grid')
+
+    def test_insert_pop_remove_column_json(self):
+        self.insert_pop_remove_column('json')
+
+    def test_insert_pop_remove_column_rst(self):
+        self.insert_pop_remove_column('rst')
+
+    def test_insert_pop_remove_column_psql(self):
+        self.insert_pop_remove_column('psql')
 
 
 if __name__ == '__main__':
