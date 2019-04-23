@@ -1243,6 +1243,20 @@ class SeabornTable(object):
             for i, key in enumerate(self.key_on):
                 row[key] = item[i]
 
+    def pop_empty_columns(self, empty=None):
+        """
+            This will pop columns from the printed columns if they only contain
+            '' or None
+        :param empty: list of values to treat as empty
+        """
+        empty = ['', None] if empty is None else empty
+        if len(self) == 0:
+            return
+        for col in list(self.columns):
+            if self[0][col] in empty:
+                if not [v for v in self.get_column(col) if v not in empty]:
+                    self.pop_column(col)
+
     def pop_column(self, column):
         self.columns = [c for c in self.columns if c != column]
 
