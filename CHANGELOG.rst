@@ -1,3 +1,9 @@
+Changes in 2.3.0
+================
+
+* Added quote_empty_str option to obj_to_str or obj_to_txt.
+
+
 Changes in 2.2.0
 ================
 
