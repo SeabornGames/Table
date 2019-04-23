@@ -1,3 +1,12 @@
+Changes in 2.4.0
+================
+
+* Added pop_empty_columns method for removing from displayed columns if the
+  column is only '' or None.
+
+* Fixed a bug with popping column.
+
+
 Changes in 2.3.0
 ================
 
