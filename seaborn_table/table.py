@@ -630,7 +630,7 @@ class SeabornTable(object):
         list_of_list, column_widths = self.get_data_and_shared_column_widths(
             data_kwargs=dict(quote_numbers=quote_numbers,
                              quote_empty_str=quote_empty_str,
-                             deliminator=deliminator),
+                             deliminator=' '),
             width_kwargs=dict(padding=0, pad_last_column=True))
         ret = [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
                for row in list_of_list]
