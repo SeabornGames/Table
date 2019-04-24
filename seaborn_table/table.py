@@ -772,16 +772,15 @@ class SeabornTable(object):
         """
         list_of_list, column_widths = self.get_data_and_shared_column_widths(
             data_kwargs=dict(quote_numbers=quote_numbers,
-                             quote_empty_str=quote_everything),
+                             quote_everything=quote_everything,
+                             safe_str=self._excel_cell),
             width_kwargs=dict(padding=1, pad_last_column=True))
-        csv = [[self._excel_cell(cell, quote_everything, quote_numbers)
-                for cell in row] for row in list_of_list]
-
         if space_columns:
             csv = [','.join([cell.ljust(column_widths[i])
-                             for i, cell in enumerate(row)]) for row in csv]
+                             for i, cell in enumerate(row)])
+                   for row in list_of_list]
         else:
-            csv = [','.join(row) for row in csv]
+            csv = [','.join(row) for row in list_of_list]
 
         if os.name == 'posix':
             ret = '\r\n'.join(csv)
@@ -1405,8 +1404,9 @@ class SeabornTable(object):
         :param width_kwargs: kwargs used for determining column widths
         :return: tuple(list of list of strings, list of int)
         """
+        safe_str = data_kwargs.pop('safe_str', self._safe_str)
         list_of_list = [self.columns] + [
-            [self._safe_str(row[col], **data_kwargs)
+            [safe_str(row[col], **data_kwargs)
              for col in self.columns] for row in self]
         column_widths = self._get_column_widths(list_of_list, **width_kwargs)
         return list_of_list, column_widths
