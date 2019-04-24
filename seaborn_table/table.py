@@ -629,7 +629,8 @@ class SeabornTable(object):
         tab = self.tab if tab is None else tab
         list_of_list, column_widths = self.get_data_and_shared_column_widths(
             data_kwargs=dict(quote_numbers=quote_numbers,
-                             quote_empty_str=quote_empty_str, deliminator=' '),
+                             quote_empty_str=quote_empty_str,
+                             deliminator=deliminator),
             width_kwargs=dict(padding=0, pad_last_column=True))
         ret = [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
                for row in list_of_list]
@@ -645,6 +646,7 @@ class SeabornTable(object):
         """
         This will return a str of a psql table.
         :param file_path:       str of the path to the file
+        :param deliminator:     str of the bar separating columns
         :param keys:            list of str of the order of keys to use
         :param tab:             string of offset of the table
         :param quote_numbers:   bool if True will quote numbers that are strings
@@ -655,8 +657,7 @@ class SeabornTable(object):
         list_of_list, column_widths = self.get_data_and_shared_column_widths(
             data_kwargs=dict(quote_numbers=quote_numbers,
                              quote_empty_str=quote_empty_str),
-            width_kwargs=dict(padding=0))
-
+            width_kwargs=dict(padding=0, pad_first_cell=1))
         for row in list_of_list:
             row[0] = ' ' + row[0]
         if len(column_widths) > 1:
@@ -666,9 +667,9 @@ class SeabornTable(object):
                 for i, cell in enumerate(list_of_list[0])]]
         ret += [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
                 for row in list_of_list[1:]]
-        ret = [deliminator.join(row) for row in ret]
         column_widths = self._get_column_widths(ret, padding=3,
                                                 pad_last_column=True)
+        ret = [deliminator.join(row) for row in ret]
         bar = ('+'.join(['-' * (width - 1) for width in column_widths]))[1:]
         ret.insert(1, bar)
         ret = tab + (u'\n' + tab).join(ret)
@@ -774,7 +775,7 @@ class SeabornTable(object):
             data_kwargs=dict(quote_numbers=quote_numbers,
                              quote_everything=quote_everything,
                              safe_str=self._excel_cell),
-            width_kwargs=dict(padding=1, pad_last_column=True))
+            width_kwargs=dict(padding=0, pad_last_column=True))
         if space_columns:
             csv = [','.join([cell.ljust(column_widths[i])
                              for i, cell in enumerate(row)])
@@ -1379,7 +1380,7 @@ class SeabornTable(object):
 
     @staticmethod
     def _get_column_widths(list_of_list, min_width=2, max_width=300,
-                           padding=1, pad_last_column=False):
+                           padding=1, pad_last_column=False, pad_first_cell=0):
         def _len(text):
             if len(text) > 15:
                 pass
@@ -1396,6 +1397,8 @@ class SeabornTable(object):
             widths.append(max(min_width, min(max_width, width)))
         if not pad_last_column and widths:
             widths[-1] = 0
+        if pad_first_cell:
+            widths[0] += pad_first_cell
         return widths
 
     def get_data_and_column_widths(self, data_kwargs, width_kwargs):

@@ -12,7 +12,7 @@ class QuoteNumbersTest(BaseTest):
         result_file = self.test_data_path('result', 'test_file.%s' % source)
         table.obj_to_file(result_file, quote_numbers=False)
         expected_file = self.test_data_path('expected', 'test_file.%s' % source)
-        self.assert_file_equal(expected_file, result_file)
+        self.assert_result_file(expected_file, result_file)
         self.remove_file(result_file)
 
     def test_quote_numbers_md(self):
@@ -83,7 +83,7 @@ class InsertPopRemoveColumnTest(BaseTest):
                                           'test_file.%s' % source)
         table.obj_to_file(result_file)
         expected_file = self.test_data_path('test_file.%s' % source)
-        self.assert_file_equal(expected_file, result_file)
+        self.assert_result_file(expected_file, result_file)
         self.remove_file(result_file)
 
     def test_insert_pop_remove_column_md(self):
@@ -125,8 +125,8 @@ class SharedColumnTest(BaseTest):
         result_file = self.test_data_path('shared', basename)
         with open(result_file, 'rb') as fn:
             for table in tables:
-                fn.write(table.obj_to_type(source)+b'\n\n')
-        self.assert_file_equal(expected_file, result_file)
+                fn.write(table.obj_to_type(source) + b'\n\n')
+        self.assert_result_file(expected_file, result_file)
         self.remove_file(result_file)
 
     def test_share_column_md(self):

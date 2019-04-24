@@ -1,4 +1,3 @@
-import os
 import unittest
 
 from seaborn_table.table import main as cli_converter
@@ -7,16 +6,13 @@ from test.support import BaseTest
 
 class FileConversionTest(BaseTest):
     def file_conversion(self, source, dest):
-        result_folder = os.path.join(PATH, source)
-        if not os.path.exists(result_folder):
-            os.mkdir(result_folder)
         source_file = self.test_data_path('test_file.%s' % source)
         expected_file = self.test_data_path('test_file.%s' % dest)
         result_file = self.test_data_path(source, 'test_file.%s' % dest)
         cli_converter(source_file, result_file)
-        self.assert_file_same(expected_file, result_file,
-                       "Failure creating filetype: %s" % source)
-        os.remove_file(result_file)
+        self.assert_result_file(expected_file, result_file,
+                                "Failure creating filetype: %s" % source)
+        self.remove_file(result_file)
 
     def test_txt_to_md(self):
         self.file_conversion('txt', 'md')
