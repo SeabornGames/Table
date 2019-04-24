@@ -1131,9 +1131,11 @@ class SeabornTable(object):
                 "Missing file: %s" % file_path
             with open(file_path, 'rb') as f:
                 text = f.read()
-        if (sys.version_info[0] == 3 and isinstance(text, bytes) or
-                    sys.version_info[0] == 2):
+        if isinstance(text, bytes):
             text = text.decode(cls.ENCODING)
+
+        if sys.version_info[0] == 2 and not isinstance(text, UNICODE):
+            text = unicode(text)
 
         if replace:
             text = text.replace(replace, u'')

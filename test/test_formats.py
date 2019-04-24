@@ -1,3 +1,4 @@
+import sys
 import unittest
 
 from seaborn_table.table import SeabornTable, UNICODE, BASESTRING
@@ -84,7 +85,10 @@ class SharedColumnTest(BaseTest, FormatMixin):
         result_file = self.test_data_path('_shared', basename)
         with open(result_file, 'w') as fn:
             for table in tables:
-                fn.write(table.obj_to_type(source) + '\n\n')
+                text = table.obj_to_type(source) + u'\n\n'
+                if sys.version_info[0] == 2:
+                    text = text.encode('utf-8')
+                fn.write(text)
         self.assert_result_file(expected_file, result_file)
         self.remove_file(result_file)
 
