@@ -11,7 +11,7 @@ class FileConversionTest(BaseTest):
         result_file = self.test_data_path(source, 'test_file.%s' % dest)
         cli_converter(source_file, result_file)
         self.assert_result_file(expected_file, result_file,
-                                "Failure creating filetype: %s" % source)
+                                "Failure converting %s into %s"%(source, dest))
         self.remove_file(result_file)
 
     def test_txt_to_md(self):

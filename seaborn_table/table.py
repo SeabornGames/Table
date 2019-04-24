@@ -571,7 +571,7 @@ class SeabornTable(object):
         self._save_file(file_path, ret)
         return ret
 
-    def obj_to_txt(self, file_path=None, deliminator=' ', tab=None,
+    def obj_to_txt(self, file_path=None, deliminator=None, tab=None,
                    quote_numbers=True, quote_empty_str=False):
         """
         This will return a simple str table.
@@ -586,7 +586,7 @@ class SeabornTable(object):
                                tab=tab, quote_numbers=quote_numbers,
                                quote_empty_str=quote_empty_str)
 
-    def obj_to_str(self, file_path=None, deliminator=' ', tab=None,
+    def obj_to_str(self, file_path=None, deliminator=None, tab=None,
                    quote_numbers=True, quote_empty_str=False):
         """
         This will return a simple str table.
