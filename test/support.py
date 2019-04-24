@@ -25,6 +25,9 @@ class BaseTest(unittest.TestCase):
             result = fp.read().decode('utf-8').replace('\r', '').split('\n')
 
         for i in range(len(result)):
+            print(repr(expected[i]))
+            print(repr(result[i]))
+            print('\n\n')
             self.assertEqual(expected[i], result[i], message)
 
     def test_data_path(self, *args):
