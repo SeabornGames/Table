@@ -1410,7 +1410,7 @@ class SeabornTable(object):
         :return: tuple(list of list of strings, list of int)
         """
         safe_str = data_kwargs.pop('safe_str', self._safe_str)
-        list_of_list = [self.columns] + [
+        list_of_list = [[safe_str(col) for col in self.columns]] + [
             [safe_str(row[col], **data_kwargs)
              for col in self.columns] for row in self]
         column_widths = self._get_column_widths(list_of_list, **width_kwargs)
