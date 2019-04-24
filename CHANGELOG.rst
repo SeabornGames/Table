@@ -10,6 +10,8 @@ Changes in 3.0.0
 
 * Fixed extra space in psql columns.
 
+* Added a share column widths method to sync the widths between two tables.
+
 
 Changes in 2.3.0
 ================

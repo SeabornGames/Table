@@ -67,6 +67,7 @@ class SeabornTable(object):
         self._tab = self.DEFAULT_TAB
         self._row_columns = []
         self._column_index = OrderedDict()
+        self.shared_tables = []
         if columns:
             columns = list(columns)
         if row_columns:
@@ -601,10 +602,11 @@ class SeabornTable(object):
         deliminator = self.deliminator if deliminator is None \
             else deliminator
         tab = self.tab if tab is None else tab
-        list_of_list = self._safe_list_of_list(quote_numbers=quote_numbers,
-                                               quote_empty_str=quote_empty_str)
+        list_of_list, column_widths = self.get_data_and_shared_column_widths(
+            data_kwargs=dict(quote_numbers=quote_numbers,
+                             quote_empty_str=quote_empty_str),
+            width_kwargs = dict(padding=0))
 
-        column_widths = self._get_column_widths(list_of_list, padding=0)
         ret = [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
                for row in list_of_list]
 
@@ -625,15 +627,12 @@ class SeabornTable(object):
         :return:                str of the converted markdown tables
         """
         tab = self.tab if tab is None else tab
-        list_of_list = self._safe_list_of_list(quote_numbers=quote_numbers,
-                                               quote_empty_str=quote_empty_str,
-                                               deliminator=' ')
-
-        column_widths = self._get_column_widths(list_of_list, padding=0)
+        list_of_list, column_widths = self.get_data_and_shared_column_widths(
+            data_kwargs=dict(quote_numbers=quote_numbers,
+                             quote_empty_str=quote_empty_str, deliminator=' '),
+            width_kwargs=dict(padding=0, pad_last_column=True))
         ret = [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
                for row in list_of_list]
-        column_widths = self._get_column_widths(list_of_list, padding=0,
-                                                pad_last_column=True)
         bar = deliminator.join(['=' * width for width in column_widths])
         ret = [deliminator.join(row) for row in ret]
         ret = [bar, ret[0], bar] + ret[1:] + [bar]
@@ -653,25 +652,24 @@ class SeabornTable(object):
         :return:                str of the converted markdown tables
         """
         tab = self.tab if tab is None else tab
-        list_of_list = self._safe_list_of_list(quote_numbers=quote_numbers,
-                                               quote_empty_str=quote_empty_str,
-                                               deliminator=deliminator)
+        list_of_list, column_widths = self.get_data_and_shared_column_widths(
+            data_kwargs=dict(quote_numbers=quote_numbers,
+                             quote_empty_str=quote_empty_str),
+            width_kwargs=dict(padding=0))
 
         for row in list_of_list:
-            row[0] = ' '+row[0]
-        column_widths = self._get_column_widths(list_of_list, padding=0)
+            row[0] = ' ' + row[0]
         if len(column_widths) > 1:
             column_widths[-1] += 1
 
         ret = [[cell.center(column_widths[i])
-                  for i, cell in enumerate(list_of_list[0])]]
+                for i, cell in enumerate(list_of_list[0])]]
         ret += [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
                 for row in list_of_list[1:]]
-
         ret = [deliminator.join(row) for row in ret]
-        column_widths = self._get_column_widths(list_of_list, padding=3,
+        column_widths = self._get_column_widths(ret, padding=3,
                                                 pad_last_column=True)
-        bar = ('+'.join(['-' * (width-1) for width in column_widths]))[1:]
+        bar = ('+'.join(['-' * (width - 1) for width in column_widths]))[1:]
         ret.insert(1, bar)
         ret = tab + (u'\n' + tab).join(ret)
         self._save_file(file_path, ret)
@@ -733,12 +731,11 @@ class SeabornTable(object):
                 else self.FANCY[tag]
 
         tab = self.tab if tab is None else tab
+        list_of_list, column_widths = self.get_data_and_shared_column_widths(
+            data_kwargs=dict(quote_numbers=quote_numbers,
+                             quote_empty_str=quote_empty_str),
+            width_kwargs=dict(padding=0, pad_last_column=True))
 
-        list_of_list = self._safe_list_of_list(quote_numbers=quote_numbers,
-                                               quote_empty_str=quote_empty_str)
-
-        column_widths = self._get_column_widths(list_of_list,
-                                                padding=0, pad_last_column=True)
         ret = [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
                for row in list_of_list]
         grid_row = {}
@@ -773,13 +770,14 @@ class SeabornTable(object):
         :param space_columns:    bool if True it will align columns with spaces
         :return: str
         """
+        list_of_list, column_widths = self.get_data_and_shared_column_widths(
+            data_kwargs=dict(quote_numbers=quote_numbers,
+                             quote_empty_str=quote_everything),
+            width_kwargs=dict(padding=1, pad_last_column=True))
         csv = [[self._excel_cell(cell, quote_everything, quote_numbers)
-                for cell in self.columns]]
-        csv += [[self._excel_cell(row[col], quote_everything, quote_numbers)
-                 for col in self.columns] for row in self.table]
+                for cell in row] for row in list_of_list]
 
         if space_columns:
-            column_widths = self._get_column_widths(csv, padding=0)
             csv = [','.join([cell.ljust(column_widths[i])
                              for i, cell in enumerate(row)]) for row in csv]
         else:
@@ -832,6 +830,18 @@ class SeabornTable(object):
         self._save_file(file_path, ret)
         return ret
 
+    def obj_to_type(self, type, *args, **kwargs):
+        if type not in self.KNOWN_FORMATS:
+            raise LookupError("Unknown format: %s"%type)
+        method = getattr(self, 'obj_to_%s' % type)
+        return method(*args, **kwargs)
+
+    def type_to_obj(self, type, *args, **kwargs):
+        if type not in self.KNOWN_FORMATS:
+            raise LookupError("Unknown format: %s"%type)
+        method = getattr(self, '%s_to_obj' % type)
+        return method(*args, **kwargs)
+
     def obj_to_file(self, file_path, quote_numbers=True):
         for file_type in self.KNOWN_FORMATS:
             if file_path.endswith('.%s' % file_type):
@@ -839,6 +849,19 @@ class SeabornTable(object):
                 return obj_to_type(file_path=file_path,
                                    quote_numbers=quote_numbers)
         raise Exception('Unknown file type: %s' % file_path)
+
+    def share_column_widths(self, tables, shared_limit=None):
+        """
+            To have this table use sync with the columns in tables
+            Note, this will need to be called on the other tables to be fully
+            synced.
+        :param tables: list of SeabornTables to share column widths
+        :param shared_limit: int if diff is greater than this than ignore it.
+        :return: None
+        """
+        for table in tables:
+            if not table in self.shared_tables and table is not self:
+                self.shared_tables.append(table, shared_limit)
 
     @property
     def tab(self):
@@ -1376,10 +1399,34 @@ class SeabornTable(object):
             widths[-1] = 0
         return widths
 
-    def _safe_list_of_list(self, *args, **kwargs):
-        list_of_list = [[self._safe_str(row[col], *args, **kwargs)
-                         for col in self.columns] for row in self]
-        return [self.columns] + list_of_list
+    def get_data_and_column_widths(self, data_kwargs, width_kwargs):
+        """
+        :param data_kwargs:  kwargs used for converting data to strings
+        :param width_kwargs: kwargs used for determining column widths
+        :return: tuple(list of list of strings, list of int)
+        """
+        list_of_list = [self.columns] + [
+            [self._safe_str(row[col], **data_kwargs)
+             for col in self.columns] for row in self]
+        column_widths = self._get_column_widths(list_of_list, **width_kwargs)
+        return list_of_list, column_widths
+
+    def get_data_and_shared_column_widths(self, data_kwargs, width_kwargs):
+        """
+        :param data_kwargs:  kwargs used for converting data to strings
+        :param width_kwargs: kwargs used for determining column widths
+        :return: tuple(list of list of strings, list of int)
+        """
+        list_of_list, column_widths = self.get_data_and_column_widths(
+            data_kwargs, width_kwargs)
+        for table, shared_limit in self.shared_tables:
+            _, widths = table.get_data_and_column_widths(
+                data_kwargs, width_kwargs)
+            for i, width in enumerate(widths[:len(column_widths)]):
+                delta = width - column_widths[i]
+                if delta > 0 and (delta <= shared_limit or not shared_limit):
+                    column_widths[i] = width
+        return list_of_list, column_widths
 
     @classmethod
     def _safe_str(cls, cell, quote_numbers=True, repr_line_break=False,

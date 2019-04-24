@@ -1,38 +1,22 @@
 import os
-import shutil
 import unittest
 
 from seaborn_table.table import main as cli_converter
-
-PATH = os.path.split(os.path.abspath(__file__))[0]
-
-
-def file(folder, ext):
-    return os.path.join(PATH, folder, 'test_file.%s' % ext)
+from test.support import BaseTest
 
 
-class FileConversionTest(unittest.TestCase):
+class FileConversionTest(BaseTest):
     def file_conversion(self, source, dest):
         result_folder = os.path.join(PATH, source)
         if not os.path.exists(result_folder):
             os.mkdir(result_folder)
-        source_file = os.path.join(PATH, 'data', 'test_file.%s' % source)
-        cli_converter(source_file, file(source, dest))
-        self.cmp_file(source, dest)
-        shutil.rmtree(result_folder)
-
-    def cmp_file(self, source, ext):
-        self.assertTrue(os.path.exists(file(source, ext)),
-                        'File not created: %s' % file(source, ext))
-        with open(file('data', ext), 'rb') as fp:
-            expected = fp.read().decode('utf-8').replace('\r', '').split('\n')
-
-        with open(file(source, ext), 'rb') as fp:
-            result = fp.read().decode('utf-8').replace('\r', '').split('\n')
-
-        for i in range(len(result)):
-            self.assertEqual(expected[i], result[i],
-                             "Failure creating filetype: %s" % ext)
+        source_file = self.test_data_path('test_file.%s' % source)
+        expected_file = self.test_data_path('test_file.%s' % dest)
+        result_file = self.test_data_path(source, 'test_file.%s' % dest)
+        cli_converter(source_file, result_file)
+        self.assert_file_same(expected_file, result_file,
+                       "Failure creating filetype: %s" % source)
+        os.remove_file(result_file)
 
     def test_txt_to_md(self):
         self.file_conversion('txt', 'md')
