@@ -20,7 +20,7 @@ setup(
     ],
     extras_require={
     },
-    packages=['seaborn_table', 'seaborn'],
+    packages=['seaborn_table'],
     license='MIT License',
     classifiers=(
         'Intended Audience :: Developers',

@@ -12,6 +12,8 @@ Changes in 3.0.0
 
 * Added a share column widths method to sync the widths between two tables.
 
+* Dropped backwards compatibility for seaborn/seaborn_table.py
+
 
 Changes in 2.3.0
 ================

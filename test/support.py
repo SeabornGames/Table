@@ -29,8 +29,8 @@ class BaseTest(unittest.TestCase):
 
     def test_data_path(self, *args):
         path = os.path.join(PATH, 'data', *args)
-        if not os.path.exists(os.path.basename(path)):
-            os.mkdir(os.path.basename(path))
+        if not os.path.exists(os.path.dirname(path)):
+            os.mkdir(os.path.dirname(path))
         return path
 
     def remove_file(self, file):
