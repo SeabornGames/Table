@@ -8,7 +8,7 @@ class FileConversionTest(BaseTest):
     def file_conversion(self, source, dest):
         source_file = self.test_data_path('test_file.%s' % source)
         expected_file = self.test_data_path('test_file.%s' % dest)
-        result_file = self.test_data_path(source, 'test_file.%s' % dest)
+        result_file = self.test_data_path('_%s'%source, 'test_file.%s' % dest)
         cli_converter(source_file, result_file)
         self.assert_result_file(expected_file, result_file,
                                 "Failure converting %s into %s"%(source, dest))

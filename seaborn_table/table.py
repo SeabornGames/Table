@@ -552,20 +552,21 @@ class SeabornTable(object):
                                      quote_numbers=quote_numbers)
 
     def obj_to_mark_down(self, file_path=None, title_columns=False,
-                         quote_numbers=True):
+                         quote_numbers=True, quote_empty_str=False):
         """
         This will return a str of a mark down table.
-        :param title_columns: bool if True will title all headers
-        :param file_path: str of the path to the file to write to
-        :param quote_numbers:  bool if True will quote numbers that are strings
+        :param title_columns:   bool if True will title all headers
+        :param file_path:       str of the path to the file to write to
+        :param quote_numbers:   bool if True will quote numbers that are strings
+        :param quote_empty_str: bool if True will quote empty strings
         :return: str
         """
-        md = [[self._title_column(col) if title_columns else str(col) for col
-               in self.columns]]
-        md += [[self._safe_str(row[col], quote_numbers)
-                for col in self.columns] for row in self.table]
+        md, column_widths = self.get_data_and_shared_column_widths(
+            data_kwargs=dict(quote_numbers=quote_numbers,
+                             quote_empty_str=quote_empty_str,
+                             title_columns=title_columns),
+            width_kwargs = dict(padding=1, pad_last_column=True))
 
-        column_widths = self._get_column_widths(md, pad_last_column=True)
         md.insert(1, [u":" + u'-' * (width - 1) for width in column_widths])
         md = [u'| '.join([row[c].ljust(column_widths[c])
                           for c in range(len(row))]) for row in md]
@@ -1409,13 +1410,16 @@ class SeabornTable(object):
         :param width_kwargs: kwargs used for determining column widths
         :return: tuple(list of list of strings, list of int)
         """
+        data_kwargs = data_kwargs.copy()
         safe_str = data_kwargs.pop('safe_str', self._safe_str)
-        list_of_list = [[safe_str(col) for col in self.columns]] + [
-            [safe_str(row[col], **data_kwargs)
-             for col in self.columns] for row in self]
+        list_of_list = [[safe_str(col, _is_header=True, **data_kwargs)
+                         for col in self.columns]]
+        list_of_list+= [[safe_str(row[col], **data_kwargs)
+                         for col in self.columns] for row in self]
         column_widths = self._get_column_widths(list_of_list, **width_kwargs)
         return list_of_list, column_widths
 
+    # todo replace data_kwargs and width_kwargs with partial methods
     def get_data_and_shared_column_widths(self, data_kwargs, width_kwargs):
         """
         :param data_kwargs:  kwargs used for converting data to strings
@@ -1435,7 +1439,8 @@ class SeabornTable(object):
 
     @classmethod
     def _safe_str(cls, cell, quote_numbers=True, repr_line_break=False,
-                  deliminator=None, quote_empty_str=False):
+                  deliminator=None, quote_empty_str=False,
+                  title_columns=False, _is_header=False):
         """
         :param cell: obj to turn in to a string
         :param quote_numbers:  bool if True will quote numbers that are strings
@@ -1448,6 +1453,8 @@ class SeabornTable(object):
 
         ret = str(cell) if not isinstance(cell, BASESTRING) else cell
         if isinstance(cell, BASESTRING):
+            if title_columns and _is_header:
+                ret = cls._title_column(ret)
             if quote_numbers and (ret.replace(u'.', u'').isdigit() or
                                           ret in [u'False', u'True', 'False',
                                                   'True']):
@@ -1461,7 +1468,8 @@ class SeabornTable(object):
         return ret
 
     @classmethod
-    def _excel_cell(cls, cell, quote_everything=False, quote_numbers=True):
+    def _excel_cell(cls, cell, quote_everything=False, quote_numbers=True,
+                    _is_header=False):
         """
         This will return a text that excel interprets correctly when
         importing csv
@@ -1469,6 +1477,7 @@ class SeabornTable(object):
         :param quote_everything: bool to quote even if not necessary
         :param quote_numbers:    bool if True will quote numbers that are
                                  strings
+        :param _is_header:       not used
         :return: str
         """
         if cell is None:

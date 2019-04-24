@@ -100,7 +100,7 @@ class ExampleTableTest(BaseTest):
         table = SeabornTable([['aaa', 'a_b_c', 'c'],
                               [1, '2\n2', '3'],
                               ['4', '5', '"Verdi: "Aida""']])
-        result_file = self.test_data_path('result', 'test_excel_csv.csv')
+        result_file = self.test_data_path('_result', 'test_excel_csv.csv')
         table.obj_to_csv(space_columns=True, file_path=result_file)
         table2 = SeabornTable.csv_to_obj(file_path=result_file)
         table2.naming_convention_columns("underscore")
@@ -115,7 +115,7 @@ class ExampleTableTest(BaseTest):
         answer_file = self.test_data_path('test_pertibate.html')
         with open(answer_file, 'r') as f:
             answer = f.read()
-        result_file = self.test_data_path('result', 'test_pertibate.html')
+        result_file = self.test_data_path('_result', 'test_pertibate.html')
         table.obj_to_html(file_path=result_file)
         self.assertEqual(answer, table.obj_to_html())
         self.remove_file(result_file)
