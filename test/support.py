@@ -17,7 +17,7 @@ logging.basicConfig(level=os.getenv('TEST_LOG_LEVEL', 'INFO'),
 class BaseTest(unittest.TestCase):
     maxDiff = None
 
-    def assert_result_file(self, expected_file, result_file, message):
+    def assert_result_file(self, expected_file, result_file, message=None):
         with open(expected_file, 'rb') as fp:
             expected = fp.read().decode('utf-8').replace('\r', '').split('\n')
 

@@ -1,4 +1,3 @@
-import os
 import unittest
 
 from seaborn_table.table import SeabornTable, UNICODE, BASESTRING
@@ -9,7 +8,7 @@ class QuoteNumbersTest(BaseTest):
     def quote_number_test(self, source):
         table = self.get_base_table()
         table.map(lambda x: UNICODE(x))
-        result_file = self.test_data_path('result', 'test_file.%s' % source)
+        result_file = self.test_data_path('quote_numbers', 'test_file.%s' % source)
         table.obj_to_file(result_file, quote_numbers=False)
         expected_file = self.test_data_path('expected', 'test_file.%s' % source)
         self.assert_result_file(expected_file, result_file)

@@ -775,7 +775,7 @@ class SeabornTable(object):
             data_kwargs=dict(quote_numbers=quote_numbers,
                              quote_everything=quote_everything,
                              safe_str=self._excel_cell),
-            width_kwargs=dict(padding=0, pad_last_column=True))
+            width_kwargs=dict(padding=0))
         if space_columns:
             csv = [','.join([cell.ljust(column_widths[i])
                              for i, cell in enumerate(row)])
