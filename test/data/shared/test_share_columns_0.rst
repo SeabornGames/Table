@@ -1,0 +1,35 @@
+========  ========  ===========  ======================  ==========
+TU        Player    Role         Action                  Target    
+========  ========  ===========  ======================  ==========
+1         Ann       Executioner  None                    None      
+1         Ben       Judge        "True"                  Inspector 
+1         Cal       Inspector    True                    Ann       
+========  ========  ===========  ======================  ==========
+
+========  ========  ===========  ======================  ==========
+TU        Player    Role         Action                  Target    
+========  ========  ===========  ======================  ==========
+1         Dan       Thief        "False"                 Ann       
+1         Ed        Reporter     False                   Cal       
+1         Fin       Trader       Class                   "Cal, Ed" 
+2         Ed        Inspector    Class                   Dan       
+2         Cal       Reporter     Class                   Dan       
+========  ========  ===========  ======================  ==========
+
+========  ========  ===========  ======================  ==========
+TU        Player    Role         Action                  Target    
+========  ========  ===========  ======================  ==========
+2         Ben       Judge        ฉันต้องคิดถึงเธอแบบไหน  Inspector 
++NA       Cal       Reporter     Claim                   Inspector 
+3         Dan       Trader       =+NA                    "Ben, Cal"
+4         Ben       Inspector    Class                   Dan       
+4         Fin       Executioner  Class                   Dan       
+4         Cal       Judge        Class                   Trader    
+========  ========  ===========  ======================  ==========
+
+========  ========  ===========  ======================  ==========
+Column 0  Column 1  Column 2     Column 3                Column 4  
+========  ========  ===========  ======================  ==========
+TU        Player    Role         Action                  Target    
+========  ========  ===========  ======================  ==========
+

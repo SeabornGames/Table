@@ -72,3 +72,32 @@ class BaseTest(unittest.TestCase):
         cls.list_of_list = [[clean(r) for r in row.split('|')[1:]]
                             for row in cls.answer.split('\n')]
         cls.list_of_list[0][4] += ' '
+
+
+class TestFormat(BaseTest):
+    def validate_test_condition(self, source):
+        raise NotImplemented
+
+    def test_md(self):
+        self.validate_test_condition('md')
+
+    def test_csv(self):
+        self.validate_test_condition('csv')
+
+    def test_txt(self):
+        self.validate_test_condition('txt')
+
+    def test_html(self):
+        self.validate_test_condition('html')
+
+    def test_grid(self):
+        self.validate_test_condition('grid')
+
+    def test_json(self):
+        self.validate_test_condition('json')
+
+    def test_rst(self):
+        self.validate_test_condition('rst')
+
+    def test_psql(self):
+        self.validate_test_condition('psql')

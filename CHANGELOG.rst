@@ -14,6 +14,8 @@ Changes in 3.0.0
 
 * Dropped backwards compatibility for seaborn/seaborn_table.py
 
+* list_to_obj and all type_to_obj assume first row is the header.
+
 
 Changes in 2.3.0
 ================

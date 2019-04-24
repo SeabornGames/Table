@@ -121,18 +121,22 @@ class SeabornTable(object):
 
     @classmethod
     def list_to_obj(cls, list_, columns, row_columns=None, tab='',
-                    key_on=None):
+                    key_on=None, no_header=False):
         """
-        :param list_:       list of list or list of dictionary to use as the
-                            source
-        :param columns:     list of strings to label the columns when converting
-                            to str
-        :param row_columns: list of columns in the actually data
-        :param tab:         str of the tab to use before the row when converting
-                            to str
-        :param key_on:      str of the column to key each row on
+        :param list_:         list of list or list of dictionary to use as the
+                              source
+        :param columns:       list of strings to label the columns when
+                              converting to str
+        :param row_columns:   list of columns in the actually data
+        :param tab:           str of the tab to use before the row when
+                              converting to str
+        :param key_on:        str of the column to key each row on
+        :param no_header:     bool if false then the first row is the headers
         :return: SeabornTable
         """
+        if not list_:
+            return cls(columns=columns, row_columns=row_columns, tab=tab,
+                       key_on=key_on)
         if getattr(list_[0], 'keys', None) and not isinstance(list_[0], dict):
             row_columns = row_columns or columns or list_[0].keys()
             column_index = cls._create_column_index(row_columns)
@@ -150,7 +154,7 @@ class SeabornTable(object):
                                 [row.get(c, None) for c in row_columns])
                      for row in list_]
 
-        elif isinstance(list_[0], (list, tuple)) and len(list_) == 1:
+        elif isinstance(list_[0], (list, tuple)) and no_header:
             row_columns = row_columns or columns or \
                           cls._key_on_columns(key_on, [
                               'Column %s' % i for i in range(len(list_[0]))])
@@ -158,9 +162,7 @@ class SeabornTable(object):
             table = [SeabornRow(column_index, row) for row in list_]
 
         elif isinstance(list_[0], (list, tuple)):
-            row_columns = row_columns or columns or []
-            if len(row_columns) < len(list_[0]):
-                row_columns = list_[0]
+            row_columns = row_columns or list_[0]
             if list_[0] == row_columns:
                 list_ = list_[1:]
             column_index = cls._create_column_index(row_columns)
@@ -357,20 +359,18 @@ class SeabornTable(object):
 
         if list_of_list[0][0] == '' and list_of_list[0][-1] == '':
             list_of_list = [row[1:-1] for row in list_of_list]
-
         return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns,
                                row_columns=row_columns)
 
     @classmethod
     def rst_to_obj(cls, file_path=None, text='', columns=None,
                    remove_empty_rows=True, key_on=None,
-                   row_columns=None, deliminator=' ', eval_cells=True):
+                   deliminator=' ', eval_cells=True):
         """
         This will convert a rst file or text to a seaborn table
         :param file_path: str of the path to the file
         :param text: str of the csv text
         :param columns: list of str of columns to use
-        :param row_columns: list of str of columns in data but not to use
         :param remove_empty_rows: bool if True will remove empty rows
         :param key_on: list of str of columns to key on
         :param deliminator: str to use as a deliminator
@@ -388,19 +388,18 @@ class SeabornTable(object):
         list_of_list = cls._merge_quoted_cells(lines, deliminator,
                                                remove_empty_rows, eval_cells,
                                                excel_boolean=False)
-        return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns,
-                               row_columns=row_columns)
+
+        return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns)
 
     @classmethod
     def psql_to_obj(cls, file_path=None, text='', columns=None,
                     remove_empty_rows=True, key_on=None,
-                    row_columns=None, deliminator=' | ', eval_cells=True):
+                    deliminator=' | ', eval_cells=True):
         """
         This will convert a psql file or text to a seaborn table
         :param file_path: str of the path to the file
         :param text: str of the csv text
         :param columns: list of str of columns to use
-        :param row_columns: list of str of columns in data but not to use
         :param remove_empty_rows: bool if True will remove empty rows
         :param key_on: list of str of columns to key on
         :param deliminator: str to use as a deliminator
@@ -419,8 +418,7 @@ class SeabornTable(object):
                         for row in text if not remove_empty_rows or
                         True in [bool(r) for r in row]]
 
-        return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns,
-                               row_columns=row_columns)
+        return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns)
 
     @classmethod
     def html_to_obj(cls, file_path=None, text='', columns=None,
@@ -430,7 +428,6 @@ class SeabornTable(object):
         :param file_path: str of the path to the file
         :param text: str of the csv text
         :param columns: list of str of columns to use
-        :param row_columns: list of str of columns in data but not to use
         :param remove_empty_rows: bool if True will remove empty rows
         :param key_on: list of str of columns to key on
         :param deliminator: str to use as a deliminator
@@ -516,7 +513,8 @@ class SeabornTable(object):
                 'The following line is formatted correctly: %s' % row
             table.append([cls._clean_cell(cell, _eval=eval_cells)
                           for cell in row[1:-1].split('|')])
-        return cls(table=table[2:], columns=columns or table[0], key_on=key_on)
+        return cls(table=table[2:], columns=columns,
+                   key_on=key_on, row_columns=table[0])
 
     @classmethod
     def objs_to_mark_down(cls, tables, file_path=None, keys=None,
@@ -573,7 +571,7 @@ class SeabornTable(object):
         self._save_file(file_path, ret)
         return ret
 
-    def obj_to_txt(self, file_path=None, deliminator=None, tab=None,
+    def obj_to_txt(self, file_path=None, deliminator=' ', tab=None,
                    quote_numbers=True, quote_empty_str=False):
         """
         This will return a simple str table.
@@ -588,7 +586,7 @@ class SeabornTable(object):
                                tab=tab, quote_numbers=quote_numbers,
                                quote_empty_str=quote_empty_str)
 
-    def obj_to_str(self, file_path=None, deliminator=None, tab=None,
+    def obj_to_str(self, file_path=None, deliminator=' ', tab=None,
                    quote_numbers=True, quote_empty_str=False):
         """
         This will return a simple str table.
@@ -836,10 +834,11 @@ class SeabornTable(object):
         method = getattr(self, 'obj_to_%s' % type)
         return method(*args, **kwargs)
 
-    def type_to_obj(self, type, *args, **kwargs):
-        if type not in self.KNOWN_FORMATS:
+    @classmethod
+    def type_to_obj(cls, type, *args, **kwargs):
+        if type not in cls.KNOWN_FORMATS:
             raise LookupError("Unknown format: %s"%type)
-        method = getattr(self, '%s_to_obj' % type)
+        method = getattr(cls, '%s_to_obj' % type)
         return method(*args, **kwargs)
 
     def obj_to_file(self, file_path, quote_numbers=True):
@@ -860,8 +859,9 @@ class SeabornTable(object):
         :return: None
         """
         for table in tables:
-            if not table in self.shared_tables and table is not self:
-                self.shared_tables.append(table, shared_limit)
+            record = (table, shared_limit)
+            if not record in self.shared_tables and table is not self:
+                self.shared_tables.append(record)
 
     @property
     def tab(self):
