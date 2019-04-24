@@ -9,7 +9,7 @@ TU 	Player	Role       	Action                	Target
 2  	Cal   	Reporter   	Class                 	Dan
 2  	Dan   	Executioner	Class                 	Ed
 2  	Ann   	Thief      	Class                 	Dan
-2  	Fin   	Trader     	Steal                 	Dan
+2  	Fin   	Trader     	"3"                   	Dan
 2  	Ben   	Judge      	ฉันต้องคิดถึงเธอแบบไหน	Inspector
 +NA	Cal   	Reporter   	Claim                 	Inspector
 3  	Dan   	Trader     	=+NA                  	Ben, Cal
