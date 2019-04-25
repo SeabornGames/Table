@@ -1435,7 +1435,7 @@ class SeabornTable(object):
                 data_kwargs, width_kwargs)
             for i, width in enumerate(widths[:len(column_widths)]):
                 delta = width - column_widths[i]
-                if delta > 0 and (delta <= shared_limit or not shared_limit):
+                if delta > 0 and (not shared_limit or delta <= shared_limit):
                     column_widths[i] = width
         return list_of_list, column_widths
 
