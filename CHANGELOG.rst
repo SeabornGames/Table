@@ -1,3 +1,9 @@
+Changes in 3.0.1
+================
+
+* Fixed bug with shared column widths when using default shared_limit.
+
+
 Changes in 3.0.0
 ================
 

@@ -73,6 +73,7 @@ class HeaderOnlyTest(BaseTest, FormatMixin):
 
 class SharedColumnTest(BaseTest, FormatMixin):
     SHARED_LIMIT = 0
+    BASENAME = 'test_share_columns_0.%s'
 
     def validate_test_condition(self, source):
         tables = [SeabornTable.file_to_obj(
@@ -80,7 +81,7 @@ class SharedColumnTest(BaseTest, FormatMixin):
             for i in range(4)]
         for table in tables:
             table.share_column_widths(tables, self.SHARED_LIMIT)
-        basename = 'test_share_columns_%s.%s' % (self.SHARED_LIMIT, source)
+        basename = self.BASENAME%source
         expected_file = self.test_data_path('expected', basename)
         result_file = self.test_data_path('_shared', basename)
         with open(result_file, 'w') as fn:
@@ -101,6 +102,12 @@ class SharedColumnTest(BaseTest, FormatMixin):
 
 class SharedColumnLimitTest(SharedColumnTest):
     SHARED_LIMIT = 10
+    BASENAME = 'test_share_columns_10.%s'
+
+
+class SharedColumnLimitTest(SharedColumnTest):
+    SHARED_LIMIT = None
+    BASENAME = 'test_share_columns_0.%s'
 
 
 if __name__ == '__main__':
