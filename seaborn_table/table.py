@@ -67,6 +67,7 @@ class SeabornTable(object):
         self._tab = self.DEFAULT_TAB
         self._row_columns = []
         self._column_index = OrderedDict()
+        self.shared_tables = []
         if columns:
             columns = list(columns)
         if row_columns:
@@ -120,18 +121,22 @@ class SeabornTable(object):
 
     @classmethod
     def list_to_obj(cls, list_, columns, row_columns=None, tab='',
-                    key_on=None):
+                    key_on=None, no_header=False):
         """
-        :param list_:       list of list or list of dictionary to use as the
-                            source
-        :param columns:     list of strings to label the columns when converting
-                            to str
-        :param row_columns: list of columns in the actually data
-        :param tab:         str of the tab to use before the row when converting
-                            to str
-        :param key_on:      str of the column to key each row on
+        :param list_:         list of list or list of dictionary to use as the
+                              source
+        :param columns:       list of strings to label the columns when
+                              converting to str
+        :param row_columns:   list of columns in the actually data
+        :param tab:           str of the tab to use before the row when
+                              converting to str
+        :param key_on:        str of the column to key each row on
+        :param no_header:     bool if false then the first row is the headers
         :return: SeabornTable
         """
+        if not list_:
+            return cls(columns=columns, row_columns=row_columns, tab=tab,
+                       key_on=key_on)
         if getattr(list_[0], 'keys', None) and not isinstance(list_[0], dict):
             row_columns = row_columns or columns or list_[0].keys()
             column_index = cls._create_column_index(row_columns)
@@ -149,7 +154,7 @@ class SeabornTable(object):
                                 [row.get(c, None) for c in row_columns])
                      for row in list_]
 
-        elif isinstance(list_[0], (list, tuple)) and len(list_) == 1:
+        elif isinstance(list_[0], (list, tuple)) and no_header:
             row_columns = row_columns or columns or \
                           cls._key_on_columns(key_on, [
                               'Column %s' % i for i in range(len(list_[0]))])
@@ -157,9 +162,7 @@ class SeabornTable(object):
             table = [SeabornRow(column_index, row) for row in list_]
 
         elif isinstance(list_[0], (list, tuple)):
-            row_columns = row_columns or columns or []
-            if len(row_columns) < len(list_[0]):
-                row_columns = list_[0]
+            row_columns = row_columns or list_[0]
             if list_[0] == row_columns:
                 list_ = list_[1:]
             column_index = cls._create_column_index(row_columns)
@@ -285,10 +288,12 @@ class SeabornTable(object):
         edges = edges if edges else cls.FANCY
         lines = cls._get_lines(file_path, text)
         data = []
-        for i in range(len(lines)):
+        for i in range(len(lines)-1):
             if i % 2 == 1:
                 row = lines[i].split(edges['internal vertical edge'])[1:-1]
                 data.append([cls._eval_cell(r, _eval=eval_cells) for r in row])
+
+        # todo should be refactored to list_to_obj
         row_columns = data[0]
         if len(row_columns) != len(set(row_columns)):  # make unique
             for i, col in enumerate(row_columns):
@@ -356,20 +361,18 @@ class SeabornTable(object):
 
         if list_of_list[0][0] == '' and list_of_list[0][-1] == '':
             list_of_list = [row[1:-1] for row in list_of_list]
-
         return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns,
                                row_columns=row_columns)
 
     @classmethod
     def rst_to_obj(cls, file_path=None, text='', columns=None,
                    remove_empty_rows=True, key_on=None,
-                   row_columns=None, deliminator=' ', eval_cells=True):
+                   deliminator=' ', eval_cells=True):
         """
         This will convert a rst file or text to a seaborn table
         :param file_path: str of the path to the file
         :param text: str of the csv text
         :param columns: list of str of columns to use
-        :param row_columns: list of str of columns in data but not to use
         :param remove_empty_rows: bool if True will remove empty rows
         :param key_on: list of str of columns to key on
         :param deliminator: str to use as a deliminator
@@ -387,19 +390,18 @@ class SeabornTable(object):
         list_of_list = cls._merge_quoted_cells(lines, deliminator,
                                                remove_empty_rows, eval_cells,
                                                excel_boolean=False)
-        return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns,
-                               row_columns=row_columns)
+
+        return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns)
 
     @classmethod
     def psql_to_obj(cls, file_path=None, text='', columns=None,
                     remove_empty_rows=True, key_on=None,
-                    row_columns=None, deliminator=' | ', eval_cells=True):
+                    deliminator=' | ', eval_cells=True):
         """
         This will convert a psql file or text to a seaborn table
         :param file_path: str of the path to the file
         :param text: str of the csv text
         :param columns: list of str of columns to use
-        :param row_columns: list of str of columns in data but not to use
         :param remove_empty_rows: bool if True will remove empty rows
         :param key_on: list of str of columns to key on
         :param deliminator: str to use as a deliminator
@@ -418,8 +420,7 @@ class SeabornTable(object):
                         for row in text if not remove_empty_rows or
                         True in [bool(r) for r in row]]
 
-        return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns,
-                               row_columns=row_columns)
+        return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns)
 
     @classmethod
     def html_to_obj(cls, file_path=None, text='', columns=None,
@@ -429,7 +430,6 @@ class SeabornTable(object):
         :param file_path: str of the path to the file
         :param text: str of the csv text
         :param columns: list of str of columns to use
-        :param row_columns: list of str of columns in data but not to use
         :param remove_empty_rows: bool if True will remove empty rows
         :param key_on: list of str of columns to key on
         :param deliminator: str to use as a deliminator
@@ -515,7 +515,8 @@ class SeabornTable(object):
                 'The following line is formatted correctly: %s' % row
             table.append([cls._clean_cell(cell, _eval=eval_cells)
                           for cell in row[1:-1].split('|')])
-        return cls(table=table[2:], columns=columns or table[0], key_on=key_on)
+        return cls(table=table[2:], columns=columns,
+                   key_on=key_on, row_columns=table[0])
 
     @classmethod
     def objs_to_mark_down(cls, tables, file_path=None, keys=None,
@@ -551,20 +552,21 @@ class SeabornTable(object):
                                      quote_numbers=quote_numbers)
 
     def obj_to_mark_down(self, file_path=None, title_columns=False,
-                         quote_numbers=True):
+                         quote_numbers=True, quote_empty_str=False):
         """
         This will return a str of a mark down table.
-        :param title_columns: bool if True will title all headers
-        :param file_path: str of the path to the file to write to
-        :param quote_numbers:  bool if True will quote numbers that are strings
+        :param title_columns:   bool if True will title all headers
+        :param file_path:       str of the path to the file to write to
+        :param quote_numbers:   bool if True will quote numbers that are strings
+        :param quote_empty_str: bool if True will quote empty strings
         :return: str
         """
-        md = [[self._title_column(col) if title_columns else str(col) for col
-               in self.columns]]
-        md += [[self._safe_str(row[col], quote_numbers)
-                for col in self.columns] for row in self.table]
+        md, column_widths = self.get_data_and_shared_column_widths(
+            data_kwargs=dict(quote_numbers=quote_numbers,
+                             quote_empty_str=quote_empty_str,
+                             title_columns=title_columns),
+            width_kwargs = dict(padding=1, pad_last_column=True))
 
-        column_widths = self._get_column_widths(md, pad_last_column=True)
         md.insert(1, [u":" + u'-' * (width - 1) for width in column_widths])
         md = [u'| '.join([row[c].ljust(column_widths[c])
                           for c in range(len(row))]) for row in md]
@@ -601,13 +603,11 @@ class SeabornTable(object):
         deliminator = self.deliminator if deliminator is None \
             else deliminator
         tab = self.tab if tab is None else tab
+        list_of_list, column_widths = self.get_data_and_shared_column_widths(
+            data_kwargs=dict(quote_numbers=quote_numbers,
+                             quote_empty_str=quote_empty_str),
+            width_kwargs = dict(padding=0))
 
-        list_of_list = [[self._safe_str(cell, quote_numbers=quote_numbers,
-                                        quote_empty_str=quote_empty_str)
-                         for cell in row] for row in self]
-        list_of_list = [self.columns] + list_of_list
-
-        column_widths = self._get_column_widths(list_of_list, padding=0)
         ret = [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
                for row in list_of_list]
 
@@ -617,27 +617,24 @@ class SeabornTable(object):
         return ret
 
     def obj_to_rst(self, file_path=None, deliminator='  ', tab=None,
-                   quote_numbers=True):
+                   quote_numbers=True, quote_empty_str=False):
         """
         This will return a str of a rst table.
-        :param file_path:      str of the path to the file
-        :param keys:           list of str of the order of keys to use
-        :param tab:            string of offset of the table
-        :param quote_numbers:  bool if True will quote numbers that are strings
-        :return:               str of the converted markdown tables
+        :param file_path:       str of the path to the file
+        :param keys:            list of str of the order of keys to use
+        :param tab:             string of offset of the table
+        :param quote_numbers:   bool if True will quote numbers that are strings
+        :param quote_empty_str: bool if True will quote empty strings
+        :return:                str of the converted markdown tables
         """
         tab = self.tab if tab is None else tab
-
-        list_of_list = [[self._safe_str(cell, quote_numbers=quote_numbers,
-                                        deliminator=' ')
-                         for cell in row] for row in self]
-        list_of_list = [self.columns] + list_of_list
-
-        column_widths = self._get_column_widths(list_of_list, padding=0)
+        list_of_list, column_widths = self.get_data_and_shared_column_widths(
+            data_kwargs=dict(quote_numbers=quote_numbers,
+                             quote_empty_str=quote_empty_str,
+                             deliminator=' '),
+            width_kwargs=dict(padding=0, pad_last_column=True))
         ret = [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
                for row in list_of_list]
-        column_widths = self._get_column_widths(list_of_list, padding=0,
-                                                pad_last_column=True)
         bar = deliminator.join(['=' * width for width in column_widths])
         ret = [deliminator.join(row) for row in ret]
         ret = [bar, ret[0], bar] + ret[1:] + [bar]
@@ -646,30 +643,35 @@ class SeabornTable(object):
         return ret
 
     def obj_to_psql(self, file_path=None, deliminator=' | ', tab=None,
-                    quote_numbers=True):
+                    quote_numbers=True, quote_empty_str=False):
         """
         This will return a str of a psql table.
-        :param file_path:      str of the path to the file
-        :param keys:           list of str of the order of keys to use
-        :param tab:            string of offset of the table
-        :param quote_numbers:  bool if True will quote numbers that are strings
-        :return:               str of the converted markdown tables
+        :param file_path:       str of the path to the file
+        :param deliminator:     str of the bar separating columns
+        :param keys:            list of str of the order of keys to use
+        :param tab:             string of offset of the table
+        :param quote_numbers:   bool if True will quote numbers that are strings
+        :param quote_empty_str: bool if True will quote empty strings
+        :return:                str of the converted markdown tables
         """
         tab = self.tab if tab is None else tab
+        list_of_list, column_widths = self.get_data_and_shared_column_widths(
+            data_kwargs=dict(quote_numbers=quote_numbers,
+                             quote_empty_str=quote_empty_str),
+            width_kwargs=dict(padding=0, pad_first_cell=1))
+        for row in list_of_list:
+            row[0] = ' ' + row[0]
+        if len(column_widths) > 1:
+            column_widths[-1] += 1
 
-        list_of_list = [[self._safe_str(cell, quote_numbers=quote_numbers)
-                         for cell in row] for row in self]
-        list_of_list = [self.columns] + list_of_list
-
-        column_widths = self._get_column_widths(list_of_list, padding=0)
-        ret = [
-            [' ' + cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
-            for row in list_of_list]
-
-        ret = [deliminator.join(row) for row in ret]
-        column_widths = self._get_column_widths(list_of_list, padding=3,
+        ret = [[cell.center(column_widths[i])
+                for i, cell in enumerate(list_of_list[0])]]
+        ret += [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
+                for row in list_of_list[1:]]
+        column_widths = self._get_column_widths(ret, padding=3,
                                                 pad_last_column=True)
-        bar = ('+'.join(['-' * width for width in column_widths]))[1:]
+        ret = [deliminator.join(row) for row in ret]
+        bar = ('+'.join(['-' * (width - 1) for width in column_widths]))[1:]
         ret.insert(1, bar)
         ret = tab + (u'\n' + tab).join(ret)
         self._save_file(file_path, ret)
@@ -702,17 +704,18 @@ class SeabornTable(object):
         return ret
 
     def obj_to_grid(self, file_path=None, delim=None, tab=None,
-                    quote_numbers=True):
+                    quote_numbers=True, quote_empty_str=False):
         """
         This will return a str of a grid table.
-        :param file_path:      path to data file, defaults to
-                               self's contents if left alone
-        :param delim:          dict of deliminators, defaults to
-                               obj_to_str's method:
-        :param tab:            string of offset of the table
-        :param quote_numbers:  bool if True will quote numbers that are strings
-        :return:               string representing the grid formation
-                               of the relevant data
+        :param file_path:       path to data file, defaults to
+                                self's contents if left alone
+        :param delim:           dict of deliminators, defaults to
+                                obj_to_str's method:
+        :param tab:             string of offset of the table
+        :param quote_numbers:   bool if True will quote numbers that are strings
+        :param quote_empty_str: bool if True will quote empty strings
+        :return:                string representing the grid formation
+                                of the relevant data
         """
 
         div_delims = {"top": ['top left corner', 'top intersect',
@@ -730,13 +733,11 @@ class SeabornTable(object):
                 else self.FANCY[tag]
 
         tab = self.tab if tab is None else tab
+        list_of_list, column_widths = self.get_data_and_shared_column_widths(
+            data_kwargs=dict(quote_numbers=quote_numbers,
+                             quote_empty_str=quote_empty_str),
+            width_kwargs=dict(padding=0, pad_last_column=True))
 
-        list_of_list = [[self._safe_str(cell, quote_numbers=quote_numbers)
-                         for cell in row] for row in self]
-        list_of_list = [self.columns] + list_of_list
-
-        column_widths = self._get_column_widths(list_of_list,
-                                                padding=0, pad_last_column=True)
         ret = [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
                for row in list_of_list]
         grid_row = {}
@@ -759,28 +760,29 @@ class SeabornTable(object):
         self._save_file(file_path, ret)
         return ret
 
-    def obj_to_csv(self, quote_everything=False, space_columns=True,
-                   quote_numbers=True, file_path=None):
+    def obj_to_csv(self, file_path=None, quote_everything=False,
+                   space_columns=True, quote_numbers=True):
         """
         This will return a str of a csv text that is friendly to excel
+        :param file_path:        str to the path
         :param quote_everything: bool if True will quote everything if it needs
-            it or not, this is so it looks pretty in excel.
-        :param quote_numbers:  bool if True will quote numbers that are strings
-        :param space_columns: bool if True it will align columns with spaces
-        :param file_path: str to the path
+                                 it or not, this is so it looks pretty in excel.
+        :param quote_numbers:    bool if True will quote numbers that are
+                                 strings
+        :param space_columns:    bool if True it will align columns with spaces
         :return: str
         """
-        csv = [[self._excel_cell(cell, quote_everything, quote_numbers)
-                for cell in self.columns]]
-        csv += [[self._excel_cell(row[col], quote_everything, quote_numbers)
-                 for col in self.columns] for row in self.table]
-
+        list_of_list, column_widths = self.get_data_and_shared_column_widths(
+            data_kwargs=dict(quote_numbers=quote_numbers,
+                             quote_everything=quote_everything,
+                             safe_str=self._excel_cell),
+            width_kwargs=dict(padding=0))
         if space_columns:
-            column_widths = self._get_column_widths(csv, padding=0)
             csv = [','.join([cell.ljust(column_widths[i])
-                             for i, cell in enumerate(row)]) for row in csv]
+                             for i, cell in enumerate(row)])
+                   for row in list_of_list]
         else:
-            csv = [','.join(row) for row in csv]
+            csv = [','.join(row) for row in list_of_list]
 
         if os.name == 'posix':
             ret = '\r\n'.join(csv)
@@ -790,20 +792,21 @@ class SeabornTable(object):
         self._save_file(file_path, ret)
         return ret
 
-    def obj_to_html(self, tab='', border=1, cell_padding=5, cell_spacing=1,
-                    border_color='black', align='center', row_span=None,
-                    quote_numbers=True, file_path=None):
+    def obj_to_html(self, file_path=None, tab='', border=1, cell_padding=5,
+                    cell_spacing=1, border_color='black', align='center',
+                    row_span=None, quote_numbers=True, quote_empty_str=False):
         """
         This will return a str of an html table.
-        :param tab: str to insert before each line e.g. '    '
-        :param border: int of the thickness of the table lines
-        :param cell_padding: int of the padding for the cells
-        :param cell_spacing: int of the spacing for hte cells
-        :param border_color: str of the color for the border
-        :param align: str for cell alignment, center, left, right
-        :param row_span: list of rows to span
-        :param quote_numbers:  bool if True will quote numbers that are strings
-        :param file_path: str for path to the file
+        :param file_path:       str for path to the file
+        :param tab:             str to insert before each line e.g. '    '
+        :param border:          int of the thickness of the table lines
+        :param cell_padding:    int of the padding for the cells
+        :param cell_spacing:    int of the spacing for hte cells
+        :param border_color:    str of the color for the border
+        :param align:           str for cell alignment, center, left, right
+        :param row_span:        list of rows to span
+        :param quote_numbers:   bool if True will quote numbers that are strings
+        :param quote_empty_str: bool if True will quote empty strings
         :return: str of html code
         """
         html_table = self._html_link_cells()
@@ -828,6 +831,19 @@ class SeabornTable(object):
         self._save_file(file_path, ret)
         return ret
 
+    def obj_to_type(self, type, *args, **kwargs):
+        if type not in self.KNOWN_FORMATS:
+            raise LookupError("Unknown format: %s"%type)
+        method = getattr(self, 'obj_to_%s' % type)
+        return method(*args, **kwargs)
+
+    @classmethod
+    def type_to_obj(cls, type, *args, **kwargs):
+        if type not in cls.KNOWN_FORMATS:
+            raise LookupError("Unknown format: %s"%type)
+        method = getattr(cls, '%s_to_obj' % type)
+        return method(*args, **kwargs)
+
     def obj_to_file(self, file_path, quote_numbers=True):
         for file_type in self.KNOWN_FORMATS:
             if file_path.endswith('.%s' % file_type):
@@ -835,6 +851,20 @@ class SeabornTable(object):
                 return obj_to_type(file_path=file_path,
                                    quote_numbers=quote_numbers)
         raise Exception('Unknown file type: %s' % file_path)
+
+    def share_column_widths(self, tables, shared_limit=None):
+        """
+            To have this table use sync with the columns in tables
+            Note, this will need to be called on the other tables to be fully
+            synced.
+        :param tables: list of SeabornTables to share column widths
+        :param shared_limit: int if diff is greater than this than ignore it.
+        :return: None
+        """
+        for table in tables:
+            record = (table, shared_limit)
+            if not record in self.shared_tables and table is not self:
+                self.shared_tables.append(record)
 
     @property
     def tab(self):
@@ -953,12 +983,16 @@ class SeabornTable(object):
         :param key: str of the column to remove from every row in the table
         :return: None
         """
-        if not isinstance(key, int):
-            key = self._column_index[key]
+        if isinstance(key, int):
+            index = key
+            key = self.row_columns[key]
+        else:
+            index = self._column_index[key]
         for row in self.table:
-            row.pop(key)
-        self.row_columns = [i for i, c in enumerate(self.row_columns) if
-                            i + key]
+            row.pop(index)
+        self.row_columns = self.row_columns[:index] + self.row_columns[
+                                                      index + 1:]
+        self.pop_column(key)
 
     def filter_by(self, **kwargs):
         """
@@ -1097,9 +1131,11 @@ class SeabornTable(object):
                 "Missing file: %s" % file_path
             with open(file_path, 'rb') as f:
                 text = f.read()
-        if (sys.version_info[0] == 3 and isinstance(text, bytes) or
-                    sys.version_info[0] == 2):
+        if isinstance(text, bytes):
             text = text.decode(cls.ENCODING)
+
+        if sys.version_info[0] == 2 and not isinstance(text, UNICODE):
+            text = unicode(text)
 
         if replace:
             text = text.replace(replace, u'')
@@ -1241,6 +1277,20 @@ class SeabornTable(object):
             for i, key in enumerate(self.key_on):
                 row[key] = item[i]
 
+    def pop_empty_columns(self, empty=None):
+        """
+            This will pop columns from the printed columns if they only contain
+            '' or None
+        :param empty: list of values to treat as empty
+        """
+        empty = ['', None] if empty is None else empty
+        if len(self) == 0:
+            return
+        for col in list(self.columns):
+            if self[0][col] in empty:
+                if not [v for v in self.get_column(col) if v not in empty]:
+                    self.pop_column(col)
+
     def pop_column(self, column):
         self.columns = [c for c in self.columns if c != column]
 
@@ -1335,7 +1385,7 @@ class SeabornTable(object):
 
     @staticmethod
     def _get_column_widths(list_of_list, min_width=2, max_width=300,
-                           padding=1, pad_last_column=False):
+                           padding=1, pad_last_column=False, pad_first_cell=0):
         def _len(text):
             if len(text) > 15:
                 pass
@@ -1352,11 +1402,47 @@ class SeabornTable(object):
             widths.append(max(min_width, min(max_width, width)))
         if not pad_last_column and widths:
             widths[-1] = 0
+        if pad_first_cell:
+            widths[0] += pad_first_cell
         return widths
+
+    def get_data_and_column_widths(self, data_kwargs, width_kwargs):
+        """
+        :param data_kwargs:  kwargs used for converting data to strings
+        :param width_kwargs: kwargs used for determining column widths
+        :return: tuple(list of list of strings, list of int)
+        """
+        data_kwargs = data_kwargs.copy()
+        safe_str = data_kwargs.pop('safe_str', self._safe_str)
+        list_of_list = [[safe_str(col, _is_header=True, **data_kwargs)
+                         for col in self.columns]]
+        list_of_list+= [[safe_str(row[col], **data_kwargs)
+                         for col in self.columns] for row in self]
+        column_widths = self._get_column_widths(list_of_list, **width_kwargs)
+        return list_of_list, column_widths
+
+    # todo replace data_kwargs and width_kwargs with partial methods
+    def get_data_and_shared_column_widths(self, data_kwargs, width_kwargs):
+        """
+        :param data_kwargs:  kwargs used for converting data to strings
+        :param width_kwargs: kwargs used for determining column widths
+        :return: tuple(list of list of strings, list of int)
+        """
+        list_of_list, column_widths = self.get_data_and_column_widths(
+            data_kwargs, width_kwargs)
+        for table, shared_limit in self.shared_tables:
+            _, widths = table.get_data_and_column_widths(
+                data_kwargs, width_kwargs)
+            for i, width in enumerate(widths[:len(column_widths)]):
+                delta = width - column_widths[i]
+                if delta > 0 and (delta <= shared_limit or not shared_limit):
+                    column_widths[i] = width
+        return list_of_list, column_widths
 
     @classmethod
     def _safe_str(cls, cell, quote_numbers=True, repr_line_break=False,
-                  deliminator=None, quote_empty_str=False):
+                  deliminator=None, quote_empty_str=False,
+                  title_columns=False, _is_header=False):
         """
         :param cell: obj to turn in to a string
         :param quote_numbers:  bool if True will quote numbers that are strings
@@ -1369,6 +1455,8 @@ class SeabornTable(object):
 
         ret = str(cell) if not isinstance(cell, BASESTRING) else cell
         if isinstance(cell, BASESTRING):
+            if title_columns and _is_header:
+                ret = cls._title_column(ret)
             if quote_numbers and (ret.replace(u'.', u'').isdigit() or
                                           ret in [u'False', u'True', 'False',
                                                   'True']):
@@ -1382,7 +1470,8 @@ class SeabornTable(object):
         return ret
 
     @classmethod
-    def _excel_cell(cls, cell, quote_everything=False, quote_numbers=True):
+    def _excel_cell(cls, cell, quote_everything=False, quote_numbers=True,
+                    _is_header=False):
         """
         This will return a text that excel interprets correctly when
         importing csv
@@ -1390,6 +1479,7 @@ class SeabornTable(object):
         :param quote_everything: bool to quote even if not necessary
         :param quote_numbers:    bool if True will quote numbers that are
                                  strings
+        :param _is_header:       not used
         :return: str
         """
         if cell is None:

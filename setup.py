@@ -9,7 +9,7 @@ except Exception:
 
 setup(
     name='seaborn-table',
-    version='2.3.0',
+    version='3.0.0',
     description='SeabornTable reads and writes tables in '
                 'csv and md and acts like a list and dict."',
     long_description=long_description,
@@ -20,7 +20,7 @@ setup(
     ],
     extras_require={
     },
-    packages=['seaborn_table', 'seaborn'],
+    packages=['seaborn_table'],
     license='MIT License',
     classifiers=(
         'Intended Audience :: Developers',

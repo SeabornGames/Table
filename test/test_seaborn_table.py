@@ -1,53 +1,10 @@
-import logging
-import os
-import sys
 import unittest
 
-
 from seaborn_table.table import SeabornTable
-
-log = logging.getLogger(__file__)
-
-logging.basicConfig(level=logging.DEBUG,
-                    format="%(message)s",
-                    handlers=[logging.StreamHandler(sys.__stdout__)])
-
-PATH = os.path.split(os.path.abspath(__file__))[0]
+from test.support import BaseTest, log
 
 
-class ExampleTableTest(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        answer = """
-        Behave examples table with the following results::
-            | #  | column 1 | col2  | column 3 | output column  | output col2
-            | 0  | 1        | Hello | a        |                | 1
-            | 1  | 2        | Hello | a        |                | 2
-            | 2  | 1        | World | a        |                | 1
-            | 3  | 2        | World | a        |                | 2
-            | 4  | 2        | Hello | b        |                | 2
-            | 5  | 1        | World | b        |                | 1
-            | 6  | 2        | World | b        |                | 2
-            | 7  | 1        | Hello | c        |                | 1
-            | 8  | 2        | Hello | c        |                | 2
-            | 9  | 1        | World | c        |                | 1
-            | 10 | 2        | World | c        |                | 2
-        """.split('::')[-1]
-        if isinstance(answer, bytes):
-            answer = answer.decode('utf8')
-        cls.answer = answer.strip().replace('\n            ', '\n')
-        def clean(cell):
-            cell = cell.strip()
-            if cell.replace('.', '').isdigit():
-                return eval(cell)
-            return cell
-        cls.list_of_list = [[clean(r) for r in row.split('|')[1:]]
-                            for row in cls.answer.split('\n')]
-        cls.list_of_list[0][4] += ' '
-
-    def setUp(self):
-        self.maxDiff = None
-
+class ExampleTableTest(BaseTest):
     def test_pertibate(self):
         def row_filter(**kwargs):
             if (kwargs['column 1'] == 1 and kwargs['column 3'] == 'b' and
@@ -66,7 +23,7 @@ class ExampleTableTest(unittest.TestCase):
                 '#': lambda _row_index, **kwargs: _row_index},
             filter_func=row_filter,
             deliminator=' | ',
-            tab = '| ',
+            tab='| ',
             max_size=100)
         self.assertEqual(self.answer, str(table))
         return table
@@ -122,7 +79,7 @@ class ExampleTableTest(unittest.TestCase):
         for i, row in enumerate(self.list_of_list[1:]):
             dict_of_dict[i] = {k: row[i] for i, k in enumerate(columns)}
         table = SeabornTable(dict_of_dict, columns, deliminator=' | ',
-                             tab = '| ')
+                             tab='| ')
         log.debug('\nAnswer:\n%s\n\nResult:\n%s\n\n' % (
             self.answer, str(table)))
         self.assertEqual(self.answer, str(table))
@@ -133,7 +90,7 @@ class ExampleTableTest(unittest.TestCase):
         for i, k in enumerate(columns):
             dict_of_list[k] = [row[i] for row in self.list_of_list[1:]]
         table = SeabornTable(dict_of_list, columns, deliminator=' | ',
-                             tab = '| ')
+                             tab='| ')
         log.debug('\nAnswer:\n%s\n\nResult:\n%s\n\n' % (
             self.answer, str(table)))
         self.assertEqual(self.answer, str(table))
@@ -143,36 +100,32 @@ class ExampleTableTest(unittest.TestCase):
         table = SeabornTable([['aaa', 'a_b_c', 'c'],
                               [1, '2\n2', '3'],
                               ['4', '5', '"Verdi: "Aida""']])
-        file_path = os.path.join(PATH, 'test_excel_csv.csv')
-        table.obj_to_csv(space_columns=True, file_path=file_path)
-        table2 = SeabornTable.csv_to_obj(file_path=file_path)
+        result_file = self.test_data_path('_result', 'test_excel_csv.csv')
+        table.obj_to_csv(space_columns=True, file_path=result_file)
+        table2 = SeabornTable.csv_to_obj(file_path=result_file)
         table2.naming_convention_columns("underscore")
         log.debug('\nAnswer:\n%s\n\nResult:\n%s\n\n' % (
             str(table), str(table2)))
         self.assertEqual(str(table), str(table2),
                          'Write then Read changed the data')
-        os.remove(file_path)
+        self.remove_file(result_file)
 
     def test_html(self):
         table = self.test_pertibate()
-        answer_file = os.path.join(PATH, 'data', 'test_pertibate.html')
+        answer_file = self.test_data_path('test_pertibate.html')
         with open(answer_file, 'r') as f:
             answer = f.read()
-        table.obj_to_html(file_path=os.path.join(PATH, 'test_pertibate.html'))
+        result_file = self.test_data_path('_result', 'test_pertibate.html')
+        table.obj_to_html(file_path=result_file)
         self.assertEqual(answer, table.obj_to_html())
-        os.remove(os.path.join(PATH, 'test_pertibate.html'))
+        self.remove_file(result_file)
 
     def test_mark_down(self):
-        """
-        Tests markdown components by performing a back-and-forth
-        translation.
-        :return:
-        """
-        with open(os.path.join(PATH, 'data', 'test.md')) as f:
+        with open(self.test_data_path('test.md')) as f:
             prev = f.read()
 
         test = SeabornTable.mark_down_to_dict_of_obj(
-            os.path.join(PATH, 'data', 'test.md'))
+            self.test_data_path('test.md'))
 
         paragraphs = prev.split("####")[1:]
         header = word = text = ''
@@ -190,15 +143,6 @@ class ExampleTableTest(unittest.TestCase):
         self.assertEqual(text, testing,
                          "Values don't match:\n%s\n%s" % (
                              repr(testing), repr(text)))
-
-    def test_fancy(self):
-        expected = SeabornTable.grid_to_obj(os.path.join(
-            PATH,'data','test_file.grid'))
-        log.debug(str(expected))
-        result = SeabornTable.mark_down_to_obj(
-            os.path.join(PATH, 'data', 'test_file.md'))
-
-        self.assertEqual(expected.obj_to_grid(), result.obj_to_grid())
 
     def test_quote_empty_str(self):
         table = SeabornTable([['aaa', 'a_b_c', 'c'],

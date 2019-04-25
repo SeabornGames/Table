@@ -1,3 +1,22 @@
+Changes in 3.0.0
+================
+
+* Added pop_empty_columns method for removing from displayed columns if the
+  column is only '' or None.
+
+* Fixed a bug with popping column.
+
+* Reordered some of the method args to make the calls more consistent.
+
+* Fixed extra space in psql columns.
+
+* Added a share column widths method to sync the widths between two tables.
+
+* Dropped backwards compatibility for seaborn/seaborn_table.py
+
+* list_to_obj and all type_to_obj assume first row is the header.
+
+
 Changes in 2.3.0
 ================
 
