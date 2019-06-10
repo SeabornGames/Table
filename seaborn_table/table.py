@@ -1365,7 +1365,7 @@ class SeabornTable(object):
         self._parameters[column] = list(set(self.get_column(column)))
 
     def get_column(self, item):
-        index = self.columns.index(item)
+        index = self._column_index[item]
         return [row[index] for row in self.table]
 
     def sort_by_key(self, keys=None):

@@ -1,3 +1,9 @@
+Changes in 3.0.2
+================
+
+* Fixed bug with ``get_column`` when referencing column index.
+
+
 Changes in 3.0.1
 ================
 
