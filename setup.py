@@ -9,7 +9,7 @@ except Exception:
 
 setup(
     name='seaborn-table',
-    version='3.0.2',
+    version='3.1.0',
     description='SeabornTable reads and writes tables in '
                 'csv and md and acts like a list and dict."',
     long_description=long_description,
