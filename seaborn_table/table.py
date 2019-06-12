@@ -1368,7 +1368,7 @@ class SeabornTable(object):
         index = self._column_index[item]
         return [row[index] for row in self.table]
 
-    def sort_by_key(self, keys=None):
+    def sort_by_key(self, keys=None, string_comparison=False):
         """
         :param keys: list of str to sort by, if name starts with -
             reverse order
@@ -1378,7 +1378,10 @@ class SeabornTable(object):
         keys = keys if isinstance(keys, (list, tuple)) else [keys]
         for key in reversed(keys):
             reverse, key = (True, key[1:]) if key[0] == '-' else (False, key)
-            self.table.sort(key=lambda row: row[key], reverse=reverse)
+            if string_comparison:
+                self.table.sort(key=lambda row: str(row[key]), reverse=reverse)
+            else:
+                self.table.sort(key=lambda row: row[key], reverse=reverse)
 
     def reverse(self):
         self.table.reverse()

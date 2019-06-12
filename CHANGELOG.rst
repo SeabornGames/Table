@@ -1,3 +1,9 @@
+Changes in 3.1.0
+================
+
+* Added argument of ``string_comparison`` to sort_by_key incase the types match.
+
+
 Changes in 3.0.2
 ================
 
