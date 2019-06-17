@@ -1,3 +1,9 @@
+Changes in 3.2.0
+================
+
+* Added slice capability to SeabornRow and SeabornTable.
+
+
 Changes in 3.1.0
 ================
 
