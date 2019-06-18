@@ -28,6 +28,14 @@ class ExampleTableTest(BaseTest):
         self.assertEqual(self.answer, str(table))
         return table
 
+    def test_slice_seaborn_row(self):
+        table = self.test_pertibate()
+        self.assertEqual(table[0][:], [0, 1, 'Hello', 'a', '', 1])
+        self.assertEqual(table[0][1:-1], [1, 'Hello', 'a', ''])
+        self.assertEqual(table[0][None:-1], [0, 1, 'Hello', 'a', ''])
+        self.assertEqual(table[0][1:None], [1, 'Hello', 'a', '', 1])
+        self.assertEqual(table[0][1:-1:2], [1, 'a'])
+
     def test_sort_by_key(self):
         table = self.test_pertibate()
         table.deliminator = ' | '

@@ -1755,7 +1755,7 @@ class SeabornRow(list):
         self.column_index = column_index
 
     def __getitem__(self, item):
-        if isinstance(item, int):
+        if isinstance(item, (int, slice)):
             return list.__getitem__(self, item)
         else:
             return list.__getitem__(self, self.column_index[item])
