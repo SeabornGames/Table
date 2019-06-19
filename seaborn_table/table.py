@@ -603,9 +603,11 @@ class SeabornTable(object):
         deliminator = self.deliminator if deliminator is None \
             else deliminator
         tab = self.tab if tab is None else tab
+        _deliminator = deliminator if deliminator.strip() else ' '
         list_of_list, column_widths = self.get_data_and_shared_column_widths(
             data_kwargs=dict(quote_numbers=quote_numbers,
-                             quote_empty_str=quote_empty_str),
+                             quote_empty_str=quote_empty_str,
+                             deliminator=_deliminator),
             width_kwargs = dict(padding=0))
 
         ret = [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]

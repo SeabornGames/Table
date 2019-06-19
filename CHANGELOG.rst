@@ -1,3 +1,9 @@
+Changes in 3.2.1
+================
+
+* Fixed bug with obj_to_str not quoting string with space within the cell.
+
+
 Changes in 3.2.0
 ================
 
