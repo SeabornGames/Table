@@ -3,6 +3,8 @@ Changes in 3.2.1
 
 * Fixed bug with obj_to_str not quoting string with space within the cell.
 
+* Added pad_last_column to obj_to_str.
+
 
 Changes in 3.2.0
 ================

@@ -75,7 +75,7 @@ class SeabornTable(object):
 
         # normalize table to a list of SeabornRows
         if not table:
-            self.row_columns = columns or row_columns or []
+            self.row_columns = row_columns or columns or []
             self.table = []
         elif isinstance(table, SeabornTable):
             columns = columns or table.columns.copy()
@@ -575,7 +575,8 @@ class SeabornTable(object):
         return ret
 
     def obj_to_txt(self, file_path=None, deliminator=None, tab=None,
-                   quote_numbers=True, quote_empty_str=False):
+                   quote_numbers=True, quote_empty_str=False,
+                   pad_last_column=False):
         """
         This will return a simple str table.
         :param file_path:       str of the path to the file
@@ -583,14 +584,17 @@ class SeabornTable(object):
         :param tab:             string of offset of the table
         :param quote_numbers:   bool if True will quote numbers that are strings
         :param quote_empty_str: bool if True will quote empty strings
+        :param pad_last_column: bool if True will space the last column
         :return:                str of the converted markdown tables
         """
         return self.obj_to_str(file_path=file_path, deliminator=deliminator,
                                tab=tab, quote_numbers=quote_numbers,
-                               quote_empty_str=quote_empty_str)
+                               quote_empty_str=quote_empty_str,
+                               pad_last_column=pad_last_column)
 
     def obj_to_str(self, file_path=None, deliminator=None, tab=None,
-                   quote_numbers=True, quote_empty_str=False):
+                   quote_numbers=True, quote_empty_str=False,
+                   pad_last_column=False):
         """
         This will return a simple str table.
         :param file_path:       str of the path to the file
@@ -598,6 +602,7 @@ class SeabornTable(object):
         :param tab:             string of offset of the table
         :param quote_numbers:   bool if True will quote numbers that are strings
         :param quote_empty_str: bool if True will quote empty strings
+        :param pad_last_column: bool if True will space the last column
         :return:                str of the converted markdown tables
         """
         deliminator = self.deliminator if deliminator is None \
@@ -608,7 +613,7 @@ class SeabornTable(object):
             data_kwargs=dict(quote_numbers=quote_numbers,
                              quote_empty_str=quote_empty_str,
                              deliminator=_deliminator),
-            width_kwargs = dict(padding=0))
+            width_kwargs = dict(padding=0, pad_last_column=pad_last_column))
 
         ret = [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
                for row in list_of_list]
