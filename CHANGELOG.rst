@@ -1,3 +1,9 @@
+Changes in 3.2.2
+================
+
+* Added pad_last_column to obj_to_str.
+
+
 Changes in 3.2.1
 ================
 
