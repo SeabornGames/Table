@@ -165,6 +165,13 @@ class ExampleTableTest(BaseTest):
         log.debug(results)
         self.assertEqual(results, answer)
 
+    def test_quote_texts(self):
+        table = SeabornTable.md_to_obj(self.test_data_path('test_file.md'))
+        expected_file = self.test_data_path('expected', 'test_quote_texts.txt')
+        result_file = self.test_data_path('_result', 'test_quote_texts.txt')
+        table.obj_to_txt(file_path=result_file, quote_texts=['None'])
+        self.assert_result_file(expected_file, result_file)
+        self.remove_file(result_file)
 
 if __name__ == '__main__':
     unittest.main()

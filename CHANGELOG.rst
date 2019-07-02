@@ -1,3 +1,9 @@
+Changes in 3.3.0
+================
+
+* added argument ``quote_texts`` to obj_to_str and obj_to_txt.
+
+
 Changes in 3.2.2
 ================
 

@@ -576,6 +576,7 @@ class SeabornTable(object):
 
     def obj_to_txt(self, file_path=None, deliminator=None, tab=None,
                    quote_numbers=True, quote_empty_str=False,
+                   quote_texts=None,
                    pad_last_column=False):
         """
         This will return a simple str table.
@@ -584,17 +585,19 @@ class SeabornTable(object):
         :param tab:             string of offset of the table
         :param quote_numbers:   bool if True will quote numbers that are strings
         :param quote_empty_str: bool if True will quote empty strings
+        :param quote_texts:     list of characters to quote
         :param pad_last_column: bool if True will space the last column
         :return:                str of the converted markdown tables
         """
         return self.obj_to_str(file_path=file_path, deliminator=deliminator,
                                tab=tab, quote_numbers=quote_numbers,
                                quote_empty_str=quote_empty_str,
+                               quote_texts=quote_texts,
                                pad_last_column=pad_last_column)
 
     def obj_to_str(self, file_path=None, deliminator=None, tab=None,
                    quote_numbers=True, quote_empty_str=False,
-                   pad_last_column=False):
+                   quote_texts=None, pad_last_column=False):
         """
         This will return a simple str table.
         :param file_path:       str of the path to the file
@@ -602,6 +605,7 @@ class SeabornTable(object):
         :param tab:             string of offset of the table
         :param quote_numbers:   bool if True will quote numbers that are strings
         :param quote_empty_str: bool if True will quote empty strings
+        :param quote_texts:     list of characters to quote
         :param pad_last_column: bool if True will space the last column
         :return:                str of the converted markdown tables
         """
@@ -612,8 +616,9 @@ class SeabornTable(object):
         list_of_list, column_widths = self.get_data_and_shared_column_widths(
             data_kwargs=dict(quote_numbers=quote_numbers,
                              quote_empty_str=quote_empty_str,
+                             quote_texts=quote_texts,
                              deliminator=_deliminator),
-            width_kwargs = dict(padding=0, pad_last_column=pad_last_column))
+            width_kwargs=dict(padding=0, pad_last_column=pad_last_column))
 
         ret = [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
                for row in list_of_list]
@@ -1449,36 +1454,42 @@ class SeabornTable(object):
                     column_widths[i] = width
         return list_of_list, column_widths
 
+
     @classmethod
     def _safe_str(cls, cell, quote_numbers=True, repr_line_break=False,
                   deliminator=None, quote_empty_str=False,
-                  title_columns=False, _is_header=False):
+                  quote_texts=None, title_columns=False, _is_header=False):
         """
         :param cell: obj to turn in to a string
         :param quote_numbers:  bool if True will quote numbers that are strings
+        :param quote_texts:  list of characters to quote.
         :param repr_line_break: if True will replace \n with \\n
         :param deliminator: if the deliminator is in the cell it will be quoted
         :param quote_empty_str: bool if True will quote empty strings
         """
         if cell is None:
             cell = ''
-
+        if quote_texts is None:
+            quote_texts = [u'"']
         ret = str(cell) if not isinstance(cell, BASESTRING) else cell
         if isinstance(cell, BASESTRING):
             if title_columns and _is_header:
                 ret = cls._title_column(ret)
-            if quote_numbers and (ret.replace(u'.', u'').isdigit() or
-                                          ret in [u'False', u'True', 'False',
-                                                  'True']):
+
+            if quote_numbers and (
+                    ret.replace(u'.', u'').isdigit() or
+                    ret in [u'False', u'True', 'False', 'True']):
                 ret = u'"%s"' % ret
-            elif u'"' in ret or (deliminator and deliminator in ret):
+            elif deliminator and deliminator in ret:
                 ret = u'"%s"' % ret
             elif quote_empty_str and cell == u'':
                 ret = u'""'
+            elif [quote_char for quote_char in quote_texts
+                  if quote_char in ret]:
+                ret = u'"%s"' % ret
         if repr_line_break:
             ret = ret.replace(u'\n', u'\\n')
         return ret
-
     @classmethod
     def _excel_cell(cls, cell, quote_everything=False, quote_numbers=True,
                     _is_header=False):
