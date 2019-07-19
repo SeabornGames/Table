@@ -198,7 +198,7 @@ class ExampleTableTest(BaseTest):
             result_row = table[key]
             end = time.monotonic()
             log.debug("test column key lookup took: %.2f seconds", end-start)
-            self.assertEquals(expected_row, result_row)
+            self.assertEqual(expected_row, result_row)
 
 if __name__ == '__main__':
     unittest.main()

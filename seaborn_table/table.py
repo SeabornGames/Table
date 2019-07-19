@@ -1304,7 +1304,7 @@ class SeabornTable(object):
             return self.table[item]
         if self.column_key:
             return self._column_key_dict[item]
-        elif isinstance(item, slice):
+        elif isinstance(item, int):
             return self.table[item]
         elif self.key_on:
             if isinstance(item, tuple):
@@ -1317,8 +1317,8 @@ class SeabornTable(object):
                     return row
             return None
         else:
-            raise TypeError("column_key or key_on must be set or item must be"
-                            " an int or slice")
+            raise KeyError("column_key or key_on must be set or item must be"
+                           " an int or slice")
 
     def __setitem__(self, item, value):
         """
