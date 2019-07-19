@@ -127,8 +127,8 @@ class SeabornTable(object):
         self.assert_valid()
 
     @classmethod
-    def list_to_obj(cls, list_, columns, row_columns=None, tab='',
-                    key_on=None, no_header=False):
+    def list_to_obj(cls, list_, columns, row_columns=None, 
+                    key_on=None, no_header=False, **kwargs):
         """
         :param list_:         list of list or list of dictionary to use as the
                               source
@@ -143,8 +143,8 @@ class SeabornTable(object):
         :return: SeabornTable
         """
         if not list_:
-            return cls(columns=columns, row_columns=row_columns, tab=tab,
-                       key_on=key_on)
+            return cls(columns=columns, row_columns=row_columns, key_on=key_on,
+                       **kwargs)
         if getattr(list_[0], 'keys', None) and not isinstance(list_[0], dict):
             row_columns = row_columns or columns or list_[0].keys()
             column_index = cls._create_column_index(row_columns)
@@ -181,7 +181,8 @@ class SeabornTable(object):
             column_index = cls._create_column_index(columns or [])
             table = [SeabornRow(column_index, [row]) for row in list_]
 
-        return cls(table, columns, row_columns, tab, key_on)
+        return cls(table, columns=columns, row_columns=row_columns,
+                   key_on=key_on, **kwargs)
 
     @classmethod
     def dict_to_obj(cls, dict_, columns, row_columns, tab='', key_on=None):
