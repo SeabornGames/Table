@@ -1269,27 +1269,31 @@ class SeabornTable(object):
 
     def __getitem__(self, item):
         """
-            This will return a row if item is an int or if key_on is set
-            else it will return the column if column if it is in self._columns
+            If column_key is set it will treat the table as a dictionary and
+                return the last row with that key_on value.
+            If key_on is set it will return the first row with all of the
+                matching items.
+            If item is an int or slice it will return the rows of that index.
         :param item: int or str of the row or column to get
-        :return: list
+        :return: row or if slice a list of rows
         """
-        if isinstance(item, (int, slice)):
-            return self.table[item]
-        else:
-            assert self.key_on
-            if not isinstance(item, (tuple, list)):
+        if self.column_key:
+            return self._column_key_dict[item]
+        elif self.key_on:
+            if isinstance(item, tuple):
+                item = list(item)
+            elif not isinstance(item, list):
                 item = [item]
-
             for row in self.table:
                 key = [row[k] for k in self.key_on]
                 if key == list(item):
                     return row
-
-            row = self.append()
-            for i, key in enumerate(self.key_on):
-                row[key] = item[i]
-            return row
+            return None
+        elif isinstance(item, (int, slice)):
+            return self.table[item]
+        else:
+            raise TypeError("column_key or key_on must be set or item must be"
+                            " an int or slice")
 
     def __setitem__(self, item, value):
         """
