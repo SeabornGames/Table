@@ -23,6 +23,9 @@ from collections import OrderedDict
 from functools import reduce
 
 
+EMPTY_ROW_PLACE_HOLDER = object()
+
+
 class SeabornTable(object):
     KNOWN_FORMATS = ['md', 'txt', 'psql', 'rst', 'html', 'grid', 'json', 'csv']
     DEFAULT_DELIMINATOR = u'\t'
@@ -233,7 +236,8 @@ class SeabornTable(object):
 
     @classmethod
     def json_to_obj(cls, file_path=None, text='', columns=None,
-                    key_on=None, guess_column_order=True, eval_cells=True, **kwargs):
+                    key_on=None, guess_column_order=True, eval_cells=True,
+                    **kwargs):
         """
         :param file_path:   str of the path to the file
         :param text:        str of the json text
@@ -310,7 +314,7 @@ class SeabornTable(object):
         edges = cls.FANCY
         lines = cls._get_lines(file_path, text)
         data = []
-        for i in range(len(lines)-1):
+        for i in range(len(lines) - 1):
             if i % 2 == 1:
                 row = lines[i].split(edges['internal vertical edge'])[1:-1]
                 data.append([cls._eval_cell(r, _eval=eval_cells) for r in row])
@@ -588,7 +592,7 @@ class SeabornTable(object):
             data_kwargs=dict(quote_numbers=quote_numbers,
                              quote_empty_str=quote_empty_str,
                              title_columns=title_columns),
-            width_kwargs = dict(padding=1, pad_last_column=True))
+            width_kwargs=dict(padding=1, pad_last_column=True))
 
         md.insert(1, [u":" + u'-' * (width - 1) for width in column_widths])
         md = [u'| '.join([row[c].ljust(column_widths[c])
@@ -868,14 +872,14 @@ class SeabornTable(object):
 
     def obj_to_type(self, type, *args, **kwargs):
         if type not in self.KNOWN_FORMATS:
-            raise LookupError("Unknown format: %s"%type)
+            raise LookupError("Unknown format: %s" % type)
         method = getattr(self, 'obj_to_%s' % type)
         return method(*args, **kwargs)
 
     @classmethod
     def type_to_obj(cls, type, *args, **kwargs):
         if type not in cls.KNOWN_FORMATS:
-            raise LookupError("Unknown format: %s"%type)
+            raise LookupError("Unknown format: %s" % type)
         method = getattr(cls, '%s_to_obj' % type)
         return method(*args, **kwargs)
 
@@ -978,8 +982,8 @@ class SeabornTable(object):
     def update_column_key_values(self):
         self._column_key_dict.clear()
         if self.column_key not in self._column_index:
-            raise LookupError("Failed to find column_key: %s in columns: %s"%(
-                              self.column_key, self.row_columns))
+            raise LookupError("Failed to find column_key: %s in columns: %s" % (
+                self.column_key, self.row_columns))
         index = self._column_index[self.column_key]
         for row in self:
             self._column_key_dict[row[index]] = row
@@ -1289,6 +1293,22 @@ class SeabornTable(object):
         elif isinstance(value, (tuple, list, dict)):
             return self._normalize_row(value) in self.table
 
+    def get(self, item, default=EMPTY_ROW_PLACE_HOLDER):
+        """
+            This is the same as a dictionary lookup but it requires
+            column_key to be set.
+        :param item: obj of the value to lookup
+        :param default: obj to return if lookup fails.  If the value is
+            EMPTY_ROW_PLACE_HOLDER it will return an newly created empty row
+        :return: row of the value returned
+        """
+        if self.column_key is None:
+            raise KeyError("column_key must be set before get can be called")
+        ret = self._column_key_dict.get(item, default)
+        if ret is EMPTY_ROW_PLACE_HOLDER:
+            ret = SeabornRow(column_index=self.column_index)
+        return ret
+
     def __getitem__(self, item):
         """
             If item is a slice it will return a list of self.table
@@ -1487,8 +1507,8 @@ class SeabornTable(object):
         safe_str = data_kwargs.pop('safe_str', self._safe_str)
         list_of_list = [[safe_str(col, _is_header=True, **data_kwargs)
                          for col in self.columns]]
-        list_of_list+= [[safe_str(row[col], **data_kwargs)
-                         for col in self.columns] for row in self]
+        list_of_list += [[safe_str(row[col], **data_kwargs)
+                          for col in self.columns] for row in self]
         column_widths = self._get_column_widths(list_of_list, **width_kwargs)
         return list_of_list, column_widths
 
@@ -1509,7 +1529,6 @@ class SeabornTable(object):
                 if delta > 0 and (not shared_limit or delta <= shared_limit):
                     column_widths[i] = width
         return list_of_list, column_widths
-
 
     @classmethod
     def _safe_str(cls, cell, quote_numbers=True, repr_line_break=False,
@@ -1533,8 +1552,8 @@ class SeabornTable(object):
                 ret = cls._title_column(ret)
 
             if quote_numbers and (
-                    ret.replace(u'.', u'').isdigit() or
-                    ret in [u'False', u'True', 'False', 'True']):
+                        ret.replace(u'.', u'').isdigit() or
+                            ret in [u'False', u'True', 'False', 'True']):
                 ret = u'"%s"' % ret
             elif deliminator and deliminator in ret:
                 ret = u'"%s"' % ret
@@ -1546,6 +1565,7 @@ class SeabornTable(object):
         if repr_line_break:
             ret = ret.replace(u'\n', u'\\n')
         return ret
+
     @classmethod
     def _excel_cell(cls, cell, quote_everything=False, quote_numbers=True,
                     _is_header=False):

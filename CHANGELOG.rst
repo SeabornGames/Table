@@ -9,6 +9,10 @@ Changes in 4.0.0
 * Update all of the *_to_obj functions to use kwargs for standard __init__
   variables.  This causes argument order to change which is the breaking change.
 
+* Added __iter__ method.
+
+* Added get method that uses column_key.
+
 
 Changes in 3.3.0
 ================
