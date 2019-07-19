@@ -295,8 +295,8 @@ class SeabornTable(object):
                                row_columns=row_columns, **kwargs)
 
     @classmethod
-    def grid_to_obj(cls, file_path=None, text='', edges=None,
-                    columns=None, eval_cells=True, key_on=None):
+    def grid_to_obj(cls, file_path=None, text='', columns=None,
+                    eval_cells=True, **kwargs):
         """
         This will convert a grid file or grid text into a seaborn table
         and return it
@@ -307,7 +307,7 @@ class SeabornTable(object):
         :param kwargs:      dictionary of values __init__ can take.
         :return: SeabornTable
         """
-        edges = edges if edges else cls.FANCY
+        edges = cls.FANCY
         lines = cls._get_lines(file_path, text)
         data = []
         for i in range(len(lines)-1):
@@ -322,7 +322,7 @@ class SeabornTable(object):
                 count = row_columns[:i].count(col)
                 row_columns[i] = '%s_%s' % (col, count) if count else col
         return cls.list_to_obj(data[1:], columns=columns,
-                               row_columns=row_columns, key_on=key_on)
+                               row_columns=row_columns, **kwargs)
 
     @classmethod
     def file_to_obj(cls, file_path, columns=None, key_on=None, eval_cells=True):
