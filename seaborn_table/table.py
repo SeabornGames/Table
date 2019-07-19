@@ -67,8 +67,6 @@ class SeabornTable(object):
             update_column_key_values.
         :param deliminator: str to separate the columns such as , \t or |
         """
-        if column_key:
-            raise Exception('TEST %s'%column_key)
         self._deliminator = self.DEFAULT_DELIMINATOR
         self._tab = self.DEFAULT_TAB
         self._row_columns = []
@@ -93,13 +91,13 @@ class SeabornTable(object):
             self._row_columns = list(table[0].column_index.keys())
             self.table = table
         elif isinstance(table, dict):
-            temp = self.dict_to_obj(table, columns, row_columns,
-                                    key_on=key_on)
+            temp = self.dict_to_obj(table, columns=columns,
+                                    row_columns=row_columns, key_on=key_on)
             self._column_index, self.table = temp._column_index, temp.table
             self._row_columns = list(self._column_index.keys())
         elif isinstance(table, list):
-            temp = self.list_to_obj(table, columns, row_columns,
-                                    key_on=key_on)
+            temp = self.list_to_obj(table, columns=columns,
+                                    row_columns=row_columns, key_on=key_on)
             self._column_index, self.table = temp._column_index, temp.table
             self._row_columns = list(self._column_index.keys())
         elif getattr(table, 'headings', None) is not None and \
