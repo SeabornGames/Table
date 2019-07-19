@@ -185,7 +185,7 @@ class SeabornTable(object):
                    key_on=key_on, **kwargs)
 
     @classmethod
-    def dict_to_obj(cls, dict_, columns, row_columns, tab='', key_on=None):
+    def dict_to_obj(cls, dict_, columns, row_columns, key_on=None, **kwargs):
         """
         :param dict_:       dict of dict or dict of list
         :param columns:     list of strings to label the columns on print out
@@ -228,11 +228,12 @@ class SeabornTable(object):
             table = [SeabornRow(column_index, [k, v]) for k, v in
                      dict_.items()]
 
-        return cls(table, columns, row_columns, tab, key_on)
+        return cls(table, columns=columns, row_columns=row_columns,
+                   key_on=key_on, **kwargs)
 
     @classmethod
     def json_to_obj(cls, file_path=None, text='', columns=None,
-                    key_on=None, guess_column_order=True, eval_cells=True):
+                    key_on=None, guess_column_order=True, eval_cells=True, **kwargs):
         """
         :param file_path:   str of the path to the file
         :param text:        str of the json text
@@ -253,7 +254,7 @@ class SeabornTable(object):
             columns = sorted(cls(table=json_data).row_columns,
                              key=lambda x: text.find('"%s":' % x))
 
-        ret = cls(table=json_data, columns=columns, key_on=key_on)
+        ret = cls(table=json_data, columns=columns, key_on=key_on, **kwargs)
         if eval_cells is False:
             for row in ret:
                 for i, cell in enumerate(row):
