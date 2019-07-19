@@ -380,9 +380,8 @@ class SeabornTable(object):
         return cls.list_to_obj(list_of_list, **kwargs)
 
     @classmethod
-    def rst_to_obj(cls, file_path=None, text='', columns=None,
-                   remove_empty_rows=True, key_on=None,
-                   deliminator=' ', eval_cells=True):
+    def rst_to_obj(cls, file_path=None, text='', remove_empty_rows=True,
+                   deliminator=' ', eval_cells=True, **kwargs):
         """
         This will convert a rst file or text to a seaborn table
         :param file_path:   str of the path to the file
@@ -406,12 +405,11 @@ class SeabornTable(object):
                                                remove_empty_rows, eval_cells,
                                                excel_boolean=False)
 
-        return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns)
+        return cls.list_to_obj(list_of_list, **kwargs)
 
     @classmethod
-    def psql_to_obj(cls, file_path=None, text='', columns=None,
-                    remove_empty_rows=True, key_on=None,
-                    deliminator=' | ', eval_cells=True):
+    def psql_to_obj(cls, file_path=None, text='', remove_empty_rows=True,
+                    deliminator=' | ', eval_cells=True, **kwargs):
         """
         This will convert a psql file or text to a seaborn table
         :param file_path:   str of the path to the file
@@ -436,11 +434,11 @@ class SeabornTable(object):
                         for row in text if not remove_empty_rows or
                         True in [bool(r) for r in row]]
 
-        return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns)
+        return cls.list_to_obj(list_of_list, **kwargs)
 
     @classmethod
-    def html_to_obj(cls, file_path=None, text='', columns=None,
-                    key_on=None, ignore_code_blocks=True, eval_cells=True):
+    def html_to_obj(cls, file_path=None, text='', ignore_code_blocks=True,
+                    eval_cells=True, **kwargs):
         """
         This will convert a html file or text to a seaborn table
         :param file_path:   str of the path to the file
@@ -456,8 +454,8 @@ class SeabornTable(object):
         raise NotImplemented
 
     @classmethod
-    def mark_down_to_dict_of_obj(cls, file_path=None, text='', columns=None,
-                                 key_on=None, eval_cells=True):
+    def mark_down_to_dict_of_obj(cls, file_path=None, text='', eval_cells=True,
+                                 **kwargs):
         """
         This will read multiple tables separated by a #### Header
         and return it as a dictionary of headers
@@ -473,13 +471,12 @@ class SeabornTable(object):
         for paragraph in paragraphs[1:]:
             header, text = paragraph.split('\n', 1)
             ret[header.strip()] = cls.mark_down_to_obj(
-                text=text, columns=columns, key_on=key_on,
-                eval_cells=eval_cells)
+                text=text, eval_cells=eval_cells, **kwargs)
         return ret
 
     @classmethod
-    def md_to_obj(cls, file_path=None, text='', columns=None,
-                  key_on=None, ignore_code_blocks=True, eval_cells=True):
+    def md_to_obj(cls, file_path=None, text='', ignore_code_blocks=True,
+                  eval_cells=True, **kwargs):
         """
         This will convert a mark down file to a seaborn table
         :param file_path:   str of the path to the file
@@ -491,13 +488,12 @@ class SeabornTable(object):
         :return: SeabornTable
         """
         return cls.mark_down_to_obj(file_path=file_path, text=text,
-                                    columns=columns, key_on=key_on,
                                     ignore_code_blocks=ignore_code_blocks,
-                                    eval_cells=eval_cells)
+                                    eval_cells=eval_cells, **kwargs)
 
     @classmethod
-    def mark_down_to_obj(cls, file_path=None, text='', columns=None,
-                         key_on=None, ignore_code_blocks=True, eval_cells=True):
+    def mark_down_to_obj(cls, file_path=None, text='', ignore_code_blocks=True,
+                         eval_cells=True, **kwargs):
         """
         This will convert a mark down file to a seaborn table
         :param file_path:   str of the path to the file
@@ -528,8 +524,7 @@ class SeabornTable(object):
                 'The following line is formatted correctly: %s' % row
             table.append([cls._clean_cell(cell, _eval=eval_cells)
                           for cell in row[1:-1].split('|')])
-        return cls(table=table[2:], columns=columns,
-                   key_on=key_on, row_columns=table[0])
+        return cls(table=table[2:], row_columns=table[0], **kwargs)
 
     @classmethod
     def objs_to_mark_down(cls, tables, file_path=None, keys=None,
