@@ -264,8 +264,8 @@ class SeabornTable(object):
 
     @classmethod
     def csv_to_obj(cls, file_path=None, text='', columns=None,
-                   remove_empty_rows=True, key_on=None, deliminator=',',
-                   eval_cells=True):
+                   remove_empty_rows=True, deliminator=',', eval_cells=True,
+                   **kwargs):
         """
         This will convert a csv file or csv text into a seaborn table
         and return it
@@ -292,7 +292,7 @@ class SeabornTable(object):
                 row_columns[i] = '%s_%s' % (col, count) if count else col
 
         return cls.list_to_obj(data[1:], columns=columns,
-                               row_columns=row_columns, key_on=key_on)
+                               row_columns=row_columns, **kwargs)
 
     @classmethod
     def grid_to_obj(cls, file_path=None, text='', edges=None,
