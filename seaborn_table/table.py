@@ -962,8 +962,9 @@ class SeabornTable(object):
 
     def update_column_key_values(self):
         self._column_key_dict.clear()
+        index = self._column_index[self.column_key]
         for row in self:
-            self._column_key_dict[row[self.column_key]] = row
+            self._column_key_dict[row[index]] = row
 
     @property
     def parameters(self):
@@ -1186,6 +1187,9 @@ class SeabornTable(object):
         assert text, 'Text is empty'
         return text
 
+    def __iter__(self):
+        return self.table.__iter__()
+
     def __str__(self):
         ret = self.obj_to_str()
         if sys.version_info[0] == 2:
@@ -1269,16 +1273,21 @@ class SeabornTable(object):
 
     def __getitem__(self, item):
         """
+            If item is a slice it will return a list of self.table
             If column_key is set it will treat the table as a dictionary and
                 return the last row with that key_on value.
+            If item is an int it will return the row of that index.
             If key_on is set it will return the first row with all of the
                 matching items.
-            If item is an int or slice it will return the rows of that index.
         :param item: int or str of the row or column to get
         :return: row or if slice a list of rows
         """
+        if isinstance(item, slice):
+            return self.table[item]
         if self.column_key:
             return self._column_key_dict[item]
+        elif isinstance(item, slice):
+            return self.table[item]
         elif self.key_on:
             if isinstance(item, tuple):
                 item = list(item)
@@ -1289,8 +1298,6 @@ class SeabornTable(object):
                 if key == list(item):
                     return row
             return None
-        elif isinstance(item, (int, slice)):
-            return self.table[item]
         else:
             raise TypeError("column_key or key_on must be set or item must be"
                             " an int or slice")
