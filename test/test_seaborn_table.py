@@ -186,10 +186,11 @@ class ExampleTableTest(BaseTest):
             end = time.monotonic()
             log.debug("Loading %s took %.2f seconds", file, end - start)
             self.assertLess(end-start, 20)
+            table.column_key = table.columns[0]
         else:
-            table = SeabornTable.str_to_obj(text=self.answer)
+            table = SeabornTable.str_to_obj(text=self.answer, deliminator=' | ',
+                                            tab='|', column_key='#')
 
-        table.column_key = table.columns[0]
         for i in range(0, len(table), int(len(table) / 20) or 1):
             expected_row = table.table[i]
             start = time.monotonic()

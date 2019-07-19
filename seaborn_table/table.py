@@ -339,22 +339,8 @@ class SeabornTable(object):
         raise Exception('Unknown file type in : %s' % file_path)
 
     @classmethod
-    def txt_to_obj(cls, file_path=None, text='', deliminator='\t', **kwargs):
-        """
-        This will convert text file or text to a seaborn table
-        and return it
-        :param file_path:   str of the path to the file
-        :param text: str of the csv text
-        :param deliminator: str to use as a deliminator
-        :param kwargs:      dictionary of values __init__ can take.
-        :return: SeabornTable
-        """
-        return cls.str_to_obj(file_path=file_path, text=text,
-                              deliminator=deliminator, **kwargs)
-
-    @classmethod
-    def str_to_obj(cls, file_path=None, text='', remove_empty_rows=True,
-                   deliminator='\t', eval_cells=True, **kwargs):
+    def txt_to_obj(cls, file_path=None, text='', remove_empty_rows=True,
+                   deliminator='\t', tab=None, eval_cells=True, **kwargs):
         """
         This will convert text file or text to a seaborn table
         and return it
@@ -362,6 +348,29 @@ class SeabornTable(object):
         :param text:        str of the csv text
         :param remove_empty_rows: bool if True will remove empty rows
         :param deliminator: str to use as a deliminator
+        :param tab:         str to include before every row, also if the row
+                            starts with it then it will be removed
+        :param eval_cells:  bool if True will try to evaluate numbers
+        :param kwargs:      dictionary of values __init__ can take.
+        :return: SeabornTable
+        """
+        return cls.str_to_obj(file_path=file_path, text=text,
+                              remove_empty_rows=remove_empty_rows,
+                              deliminator=deliminator, tab=tab,
+                              eval_cells=eval_cells, **kwargs)
+
+    @classmethod
+    def str_to_obj(cls, file_path=None, text='', remove_empty_rows=True,
+                   deliminator='\t', tab=None, eval_cells=True, **kwargs):
+        """
+        This will convert text file or text to a seaborn table
+        and return it
+        :param file_path:   str of the path to the file
+        :param text:        str of the csv text
+        :param remove_empty_rows: bool if True will remove empty rows
+        :param deliminator: str to use as a deliminator
+        :param tab:         str to include before every row, also if the row
+                            starts with it then it will be removed
         :param eval_cells:  bool if True will try to evaluate numbers
         :param kwargs:      dictionary of values __init__ can take.
         :return: SeabornTable
@@ -370,6 +379,11 @@ class SeabornTable(object):
         if len(text) == 1:
             text = text[0].split('\r')
 
+        if tab and text and text[0].startswith(tab):
+            for i, line in enumerate(text):
+                if line and line.startswith(tab):
+                    text[i] = line[len(tab):]
+
         list_of_list = [[cls._eval_cell(cell, _eval=eval_cells)
                          for cell in row.split(deliminator)]
                         for row in text if not remove_empty_rows or
@@ -377,7 +391,8 @@ class SeabornTable(object):
 
         if list_of_list[0][0] == '' and list_of_list[0][-1] == '':
             list_of_list = [row[1:-1] for row in list_of_list]
-        return cls.list_to_obj(list_of_list, **kwargs)
+        return cls.list_to_obj(list_of_list, tab=tab, deliminator=deliminator,
+                               **kwargs)
 
     @classmethod
     def rst_to_obj(cls, file_path=None, text='', remove_empty_rows=True,
@@ -962,6 +977,9 @@ class SeabornTable(object):
 
     def update_column_key_values(self):
         self._column_key_dict.clear()
+        if self.column_key not in self._column_index:
+            raise LookupError("Failed to find column_key: %s in columns: %s"%(
+                              self.column_key, self.row_columns))
         index = self._column_index[self.column_key]
         for row in self:
             self._column_key_dict[row[index]] = row
