@@ -127,8 +127,8 @@ class SeabornTable(object):
         self.assert_valid()
 
     @classmethod
-    def list_to_obj(cls, list_, columns, row_columns=None, 
-                    key_on=None, no_header=False, **kwargs):
+    def list_to_obj(cls, list_, columns=None, row_columns=None, key_on=None,
+                    no_header=False, **kwargs):
         """
         :param list_:         list of list or list of dictionary to use as the
                               source
