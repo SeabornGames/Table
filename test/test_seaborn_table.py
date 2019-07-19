@@ -181,9 +181,9 @@ class ExampleTableTest(BaseTest):
     def test_column_key(self):
         file = os.getenv('SEABORN_TABLE_LARGE_FILE')
         if file:
-            start = time.monotonic()
+            start = time.time()
             table = SeabornTable.file_to_obj(file)
-            end = time.monotonic()
+            end = time.time()
             log.debug("Loading %s took %.2f seconds", file, end - start)
             self.assertLess(end-start, 20)
             table.column_key = table.columns[0]
@@ -193,10 +193,10 @@ class ExampleTableTest(BaseTest):
 
         for i in range(0, len(table), int(len(table) / 20) or 1):
             expected_row = table.table[i]
-            start = time.monotonic()
+            start = time.time()
             key = expected_row[0]
             result_row = table[key]
-            end = time.monotonic()
+            end = time.time()
             log.debug("test column key lookup took: %.2f seconds", end-start)
             self.assertEqual(expected_row, result_row)
 
