@@ -325,7 +325,7 @@ class SeabornTable(object):
                                row_columns=row_columns, **kwargs)
 
     @classmethod
-    def file_to_obj(cls, file_path, columns=None, key_on=None, eval_cells=True):
+    def file_to_obj(cls, file_path, **kwargs):
         """
         This will convert a file to a seaborn table based on file extension.
         :param file_path:   str of the path to the file
@@ -335,14 +335,11 @@ class SeabornTable(object):
         for file_type in cls.KNOWN_FORMATS:
             if file_path.endswith('.%s' % file_type):
                 type_to_obj = getattr(cls, '%s_to_obj' % file_type)
-                return type_to_obj(file_path=file_path, columns=columns,
-                                   key_on=key_on, eval_cells=eval_cells)
+                return type_to_obj(file_path=file_path, **kwargs)
         raise Exception('Unknown file type in : %s' % file_path)
 
     @classmethod
-    def txt_to_obj(cls, file_path=None, text='', columns=None,
-                   remove_empty_rows=True, key_on=None,
-                   row_columns=None, deliminator='\t', eval_cells=True):
+    def txt_to_obj(cls, file_path=None, text='', deliminator='\t', **kwargs):
         """
         This will convert text file or text to a seaborn table
         and return it
@@ -352,15 +349,12 @@ class SeabornTable(object):
         :param kwargs:      dictionary of values __init__ can take.
         :return: SeabornTable
         """
-        return cls.str_to_obj(file_path=file_path, text=text, columns=columns,
-                              remove_empty_rows=remove_empty_rows,
-                              key_on=key_on, row_columns=row_columns,
-                              deliminator=deliminator, eval_cells=eval_cells)
+        return cls.str_to_obj(file_path=file_path, text=text,
+                              deliminator=deliminator, **kwargs)
 
     @classmethod
-    def str_to_obj(cls, file_path=None, text='', columns=None,
-                   remove_empty_rows=True, key_on=None,
-                   row_columns=None, deliminator='\t', eval_cells=True):
+    def str_to_obj(cls, file_path=None, text='', remove_empty_rows=True,
+                   deliminator='\t', eval_cells=True, **kwargs):
         """
         This will convert text file or text to a seaborn table
         and return it
@@ -383,8 +377,7 @@ class SeabornTable(object):
 
         if list_of_list[0][0] == '' and list_of_list[0][-1] == '':
             list_of_list = [row[1:-1] for row in list_of_list]
-        return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns,
-                               row_columns=row_columns)
+        return cls.list_to_obj(list_of_list, **kwargs)
 
     @classmethod
     def rst_to_obj(cls, file_path=None, text='', columns=None,
