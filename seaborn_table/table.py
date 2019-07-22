@@ -23,6 +23,9 @@ from collections import OrderedDict
 from functools import reduce
 
 
+EMPTY_ROW_PLACE_HOLDER = object()
+
+
 class SeabornTable(object):
     KNOWN_FORMATS = ['md', 'txt', 'psql', 'rst', 'html', 'grid', 'json', 'csv']
     DEFAULT_DELIMINATOR = u'\t'
@@ -54,13 +57,17 @@ class SeabornTable(object):
     }
 
     def __init__(self, table=None, columns=None, row_columns=None, tab=None,
-                 key_on=None, deliminator=None):
+                 key_on=None, column_key=None, deliminator=None):
         """
         :param table: obj can be list of list or list of dict
         :param columns: list of str of the columns in the table
         :param row_columns: list of str if different then visible columns
         :param tab: str to include before every row
-        :param key_on: tuple of str if assigned so table is accessed as dict
+        :param key_on: str, tuple, or list if assigned the table can be treated
+            as a dictionary.  This is slow but dynamic.
+        :param column_key: str if assigned the table can be treated as a
+            dictionary.  This is slow but static, it can be updated with
+            update_column_key_values.
         :param deliminator: str to separate the columns such as , \t or |
         """
         self._deliminator = self.DEFAULT_DELIMINATOR
@@ -87,13 +94,13 @@ class SeabornTable(object):
             self._row_columns = list(table[0].column_index.keys())
             self.table = table
         elif isinstance(table, dict):
-            temp = self.dict_to_obj(table, columns, row_columns,
-                                    key_on=key_on)
+            temp = self.dict_to_obj(table, columns=columns,
+                                    row_columns=row_columns, key_on=key_on)
             self._column_index, self.table = temp._column_index, temp.table
             self._row_columns = list(self._column_index.keys())
         elif isinstance(table, list):
-            temp = self.list_to_obj(table, columns, row_columns,
-                                    key_on=key_on)
+            temp = self.list_to_obj(table, columns=columns,
+                                    row_columns=row_columns, key_on=key_on)
             self._column_index, self.table = temp._column_index, temp.table
             self._row_columns = list(self._column_index.keys())
         elif getattr(table, 'headings', None) is not None and \
@@ -117,26 +124,30 @@ class SeabornTable(object):
             if column not in self._column_index:
                 # noinspection PyTypeChecker
                 self.insert(None, column, None)
+        self._column_key_dict = {}
+        self._column_key = None
+        self.column_key = column_key
         self.assert_valid()
 
     @classmethod
-    def list_to_obj(cls, list_, columns, row_columns=None, tab='',
-                    key_on=None, no_header=False):
+    def list_to_obj(cls, list_, columns=None, row_columns=None, key_on=None,
+                    no_header=False, **kwargs):
         """
         :param list_:         list of list or list of dictionary to use as the
                               source
         :param columns:       list of strings to label the columns when
                               converting to str
         :param row_columns:   list of columns in the actually data
-        :param tab:           str of the tab to use before the row when
-                              converting to str
-        :param key_on:        str of the column to key each row on
+        :param key_on:        str, tuple, or list if assigned the table can be
+                              treated as a dictionary.  This is slow but
+                              dynamic.
         :param no_header:     bool if false then the first row is the headers
+        :param kwargs:        dictionary of values __init__ can take.
         :return: SeabornTable
         """
         if not list_:
-            return cls(columns=columns, row_columns=row_columns, tab=tab,
-                       key_on=key_on)
+            return cls(columns=columns, row_columns=row_columns, key_on=key_on,
+                       **kwargs)
         if getattr(list_[0], 'keys', None) and not isinstance(list_[0], dict):
             row_columns = row_columns or columns or list_[0].keys()
             column_index = cls._create_column_index(row_columns)
@@ -173,16 +184,18 @@ class SeabornTable(object):
             column_index = cls._create_column_index(columns or [])
             table = [SeabornRow(column_index, [row]) for row in list_]
 
-        return cls(table, columns, row_columns, tab, key_on)
+        return cls(table, columns=columns, row_columns=row_columns,
+                   key_on=key_on, **kwargs)
 
     @classmethod
-    def dict_to_obj(cls, dict_, columns, row_columns, tab='', key_on=None):
+    def dict_to_obj(cls, dict_, columns, row_columns, key_on=None, **kwargs):
         """
-        :param dict_: dict of dict or dict of list
-        :param columns: list of strings to label the columns on print out
+        :param dict_:       dict of dict or dict of list
+        :param columns:     list of strings to label the columns on print out
         :param row_columns: list of columns in the actually data
-        :param tab: str of the tab to use before the row on printout
-        :param key_on: str of the column to key each row on
+        :param key_on:      str, tuple, or list if assigned the table can be
+                            treated as a dictionary.  This is slow but dynamic.
+        :param kwargs:      dictionary of values __init__ can take.
         :return: SeabornTable
         """
         if isinstance(list(dict_.values())[0], dict):
@@ -218,11 +231,24 @@ class SeabornTable(object):
             table = [SeabornRow(column_index, [k, v]) for k, v in
                      dict_.items()]
 
-        return cls(table, columns, row_columns, tab, key_on)
+        return cls(table, columns=columns, row_columns=row_columns,
+                   key_on=key_on, **kwargs)
 
     @classmethod
     def json_to_obj(cls, file_path=None, text='', columns=None,
-                    key_on=None, guess_column_order=True, eval_cells=True):
+                    key_on=None, guess_column_order=True, eval_cells=True,
+                    **kwargs):
+        """
+        :param file_path:   str of the path to the file
+        :param text:        str of the json text
+        :param columns:     list of strings to label the columns on print out
+        :param key_on:      str, tuple, or list if assigned the table can be
+                            treated as a dictionary.  This is slow but dynamic.
+        :param guess_column_order: bool if true will guess at the order
+        :param eval_cells:  bool if True will try to evaluate numbers
+        :param kwargs:      dictionary of values __init__ can take.
+        :return: SeabornTable
+        """
         if file_path is not None:
             with open(file_path, 'r') as fn:
                 text = fn.read()
@@ -232,7 +258,7 @@ class SeabornTable(object):
             columns = sorted(cls(table=json_data).row_columns,
                              key=lambda x: text.find('"%s":' % x))
 
-        ret = cls(table=json_data, columns=columns, key_on=key_on)
+        ret = cls(table=json_data, columns=columns, key_on=key_on, **kwargs)
         if eval_cells is False:
             for row in ret:
                 for i, cell in enumerate(row):
@@ -242,19 +268,19 @@ class SeabornTable(object):
 
     @classmethod
     def csv_to_obj(cls, file_path=None, text='', columns=None,
-                   remove_empty_rows=True, key_on=None, deliminator=',',
-                   eval_cells=True):
+                   remove_empty_rows=True, deliminator=',', eval_cells=True,
+                   **kwargs):
         """
         This will convert a csv file or csv text into a seaborn table
         and return it
-        :param file_path: str of the path to the file
-        :param text: str of the csv text
-        :param columns: list of str of columns to use
+        :param file_path:   str of the path to the file
+        :param text:        str of the csv text
+        :param columns:     list of str of columns to use
         :param remove_empty_rows: bool if True will remove empty rows
-                which can happen in non-trimmed file
-        :param key_on: list of str of columns to key on
+                            which can happen in non-trimmed file
         :param deliminator: str to use as a deliminator, defaults to ,
-        :param eval_cells: bool if True will try to evaluate numbers
+        :param eval_cells:  bool if True will try to evaluate numbers
+        :param kwargs:      dictionary of values __init__ can take.
         :return: SeabornTable
         """
         lines = cls._get_lines(file_path, text, replace=u'\ufeff')
@@ -270,25 +296,25 @@ class SeabornTable(object):
                 row_columns[i] = '%s_%s' % (col, count) if count else col
 
         return cls.list_to_obj(data[1:], columns=columns,
-                               row_columns=row_columns, key_on=key_on)
+                               row_columns=row_columns, **kwargs)
 
     @classmethod
-    def grid_to_obj(cls, file_path=None, text='', edges=None,
-                    columns=None, eval_cells=True, key_on=None):
+    def grid_to_obj(cls, file_path=None, text='', columns=None,
+                    eval_cells=True, **kwargs):
         """
         This will convert a grid file or grid text into a seaborn table
         and return it
         :param file_path:   str of the path to the file
         :param text:        str of the grid text
         :param columns:     list of str of columns to use
-        :param key_on:      list of str of columns to key on
         :param eval_cells:  bool if True will try to evaluate numbers
+        :param kwargs:      dictionary of values __init__ can take.
         :return: SeabornTable
         """
-        edges = edges if edges else cls.FANCY
+        edges = cls.FANCY
         lines = cls._get_lines(file_path, text)
         data = []
-        for i in range(len(lines)-1):
+        for i in range(len(lines) - 1):
             if i % 2 == 1:
                 row = lines[i].split(edges['internal vertical edge'])[1:-1]
                 data.append([cls._eval_cell(r, _eval=eval_cells) for r in row])
@@ -300,59 +326,67 @@ class SeabornTable(object):
                 count = row_columns[:i].count(col)
                 row_columns[i] = '%s_%s' % (col, count) if count else col
         return cls.list_to_obj(data[1:], columns=columns,
-                               row_columns=row_columns, key_on=key_on)
+                               row_columns=row_columns, **kwargs)
 
     @classmethod
-    def file_to_obj(cls, file_path, columns=None, key_on=None, eval_cells=True):
+    def file_to_obj(cls, file_path, **kwargs):
+        """
+        This will convert a file to a seaborn table based on file extension.
+        :param file_path:   str of the path to the file
+        :param kwargs:      dictionary of values __init__ can take.
+        :return: SeabornTable
+        """
         for file_type in cls.KNOWN_FORMATS:
             if file_path.endswith('.%s' % file_type):
                 type_to_obj = getattr(cls, '%s_to_obj' % file_type)
-                return type_to_obj(file_path=file_path, columns=columns,
-                                   key_on=key_on, eval_cells=eval_cells)
+                return type_to_obj(file_path=file_path, **kwargs)
         raise Exception('Unknown file type in : %s' % file_path)
 
     @classmethod
-    def txt_to_obj(cls, file_path=None, text='', columns=None,
-                   remove_empty_rows=True, key_on=None,
-                   row_columns=None, deliminator='\t', eval_cells=True):
+    def txt_to_obj(cls, file_path=None, text='', remove_empty_rows=True,
+                   deliminator='\t', tab=None, eval_cells=True, **kwargs):
         """
         This will convert text file or text to a seaborn table
         and return it
-        :param file_path: str of the path to the file
-        :param text: str of the csv text
-        :param columns: list of str of columns to use
-        :param row_columns: list of str of columns in data but not to use
+        :param file_path:   str of the path to the file
+        :param text:        str of the csv text
         :param remove_empty_rows: bool if True will remove empty rows
-        :param key_on: list of str of columns to key on
         :param deliminator: str to use as a deliminator
-        :param eval_cells: bool if True will try to evaluate numbers
+        :param tab:         str to include before every row, also if the row
+                            starts with it then it will be removed
+        :param eval_cells:  bool if True will try to evaluate numbers
+        :param kwargs:      dictionary of values __init__ can take.
         :return: SeabornTable
         """
-        return cls.str_to_obj(file_path=file_path, text=text, columns=columns,
+        return cls.str_to_obj(file_path=file_path, text=text,
                               remove_empty_rows=remove_empty_rows,
-                              key_on=key_on, row_columns=row_columns,
-                              deliminator=deliminator, eval_cells=eval_cells)
+                              deliminator=deliminator, tab=tab,
+                              eval_cells=eval_cells, **kwargs)
 
     @classmethod
-    def str_to_obj(cls, file_path=None, text='', columns=None,
-                   remove_empty_rows=True, key_on=None,
-                   row_columns=None, deliminator='\t', eval_cells=True):
+    def str_to_obj(cls, file_path=None, text='', remove_empty_rows=True,
+                   deliminator='\t', tab=None, eval_cells=True, **kwargs):
         """
         This will convert text file or text to a seaborn table
         and return it
-        :param file_path: str of the path to the file
-        :param text: str of the csv text
-        :param columns: list of str of columns to use
-        :param row_columns: list of str of columns in data but not to use
+        :param file_path:   str of the path to the file
+        :param text:        str of the csv text
         :param remove_empty_rows: bool if True will remove empty rows
-        :param key_on: list of str of columns to key on
         :param deliminator: str to use as a deliminator
-        :param eval_cells: bool if True will try to evaluate numbers
+        :param tab:         str to include before every row, also if the row
+                            starts with it then it will be removed
+        :param eval_cells:  bool if True will try to evaluate numbers
+        :param kwargs:      dictionary of values __init__ can take.
         :return: SeabornTable
         """
         text = cls._get_lines(file_path, text)
         if len(text) == 1:
             text = text[0].split('\r')
+
+        if tab and text and text[0].startswith(tab):
+            for i, line in enumerate(text):
+                if line and line.startswith(tab):
+                    text[i] = line[len(tab):]
 
         list_of_list = [[cls._eval_cell(cell, _eval=eval_cells)
                          for cell in row.split(deliminator)]
@@ -361,22 +395,21 @@ class SeabornTable(object):
 
         if list_of_list[0][0] == '' and list_of_list[0][-1] == '':
             list_of_list = [row[1:-1] for row in list_of_list]
-        return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns,
-                               row_columns=row_columns)
+        return cls.list_to_obj(list_of_list, tab=tab, deliminator=deliminator,
+                               **kwargs)
 
     @classmethod
-    def rst_to_obj(cls, file_path=None, text='', columns=None,
-                   remove_empty_rows=True, key_on=None,
-                   deliminator=' ', eval_cells=True):
+    def rst_to_obj(cls, file_path=None, text='', remove_empty_rows=True,
+                   deliminator=' ', eval_cells=True, **kwargs):
         """
         This will convert a rst file or text to a seaborn table
-        :param file_path: str of the path to the file
-        :param text: str of the csv text
-        :param columns: list of str of columns to use
+        :param file_path:   str of the path to the file
+        :param text:        str of the csv text
         :param remove_empty_rows: bool if True will remove empty rows
-        :param key_on: list of str of columns to key on
+        :param key_on:      list of str of columns to key on
         :param deliminator: str to use as a deliminator
-        :param eval_cells: bool if True will try to evaluate numbers
+        :param eval_cells:  bool if True will try to evaluate numbers
+        :param kwargs:      dictionary of values __init__ can take.
         :return: SeabornTable
         """
         text = cls._get_lines(file_path, text)
@@ -391,21 +424,21 @@ class SeabornTable(object):
                                                remove_empty_rows, eval_cells,
                                                excel_boolean=False)
 
-        return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns)
+        return cls.list_to_obj(list_of_list, **kwargs)
 
     @classmethod
-    def psql_to_obj(cls, file_path=None, text='', columns=None,
-                    remove_empty_rows=True, key_on=None,
-                    deliminator=' | ', eval_cells=True):
+    def psql_to_obj(cls, file_path=None, text='', remove_empty_rows=True,
+                    deliminator=' | ', eval_cells=True, **kwargs):
         """
         This will convert a psql file or text to a seaborn table
-        :param file_path: str of the path to the file
-        :param text: str of the csv text
-        :param columns: list of str of columns to use
+        :param file_path:   str of the path to the file
+        :param text:        str of the csv text
+        :param columns:     list of str of columns to use
         :param remove_empty_rows: bool if True will remove empty rows
-        :param key_on: list of str of columns to key on
+        :param key_on:      list of str of columns to key on
         :param deliminator: str to use as a deliminator
-        :param eval_cells: bool if True will try to evaluate numbers
+        :param eval_cells:  bool if True will try to evaluate numbers
+        :param kwargs:      dictionary of values __init__ can take.
         :return: SeabornTable
         """
         text = cls._get_lines(file_path, text)
@@ -420,35 +453,35 @@ class SeabornTable(object):
                         for row in text if not remove_empty_rows or
                         True in [bool(r) for r in row]]
 
-        return cls.list_to_obj(list_of_list, key_on=key_on, columns=columns)
+        return cls.list_to_obj(list_of_list, **kwargs)
 
     @classmethod
-    def html_to_obj(cls, file_path=None, text='', columns=None,
-                    key_on=None, ignore_code_blocks=True, eval_cells=True):
+    def html_to_obj(cls, file_path=None, text='', ignore_code_blocks=True,
+                    eval_cells=True, **kwargs):
         """
         This will convert a html file or text to a seaborn table
-        :param file_path: str of the path to the file
-        :param text: str of the csv text
-        :param columns: list of str of columns to use
+        :param file_path:   str of the path to the file
+        :param text:        str of the csv text
+        :param columns:     list of str of columns to use
         :param remove_empty_rows: bool if True will remove empty rows
-        :param key_on: list of str of columns to key on
+        :param key_on:      list of str of columns to key on
         :param deliminator: str to use as a deliminator
-        :param eval_cells: bool if True will try to evaluate numbers
+        :param eval_cells:  bool if True will try to evaluate numbers
+        :param kwargs:      dictionary of values __init__ can take.
         :return: SeabornTable
         """
         raise NotImplemented
 
     @classmethod
-    def mark_down_to_dict_of_obj(cls, file_path=None, text='', columns=None,
-                                 key_on=None, eval_cells=True):
+    def mark_down_to_dict_of_obj(cls, file_path=None, text='', eval_cells=True,
+                                 **kwargs):
         """
         This will read multiple tables separated by a #### Header
         and return it as a dictionary of headers
-        :param file_path: str of the path to the file
-        :param text: str of the mark down text
-        :param columns: list of str of columns to use
-        :param key_on: list of str of columns to key on
-        :param eval_cells: bool if True will try to evaluate numbers
+        :param file_path:   str of the path to the file
+        :param text:        str of the mark down text
+        :param eval_cells:  bool if True will try to evaluate numbers
+        :param kwargs:      dictionary of values __init__ can take.
         :return: OrderedDict of {<header>: SeabornTable}
         """
         text = cls._get_lines(file_path, text, split_lines=False)
@@ -457,42 +490,37 @@ class SeabornTable(object):
         for paragraph in paragraphs[1:]:
             header, text = paragraph.split('\n', 1)
             ret[header.strip()] = cls.mark_down_to_obj(
-                text=text, columns=columns, key_on=key_on,
-                eval_cells=eval_cells)
+                text=text, eval_cells=eval_cells, **kwargs)
         return ret
 
     @classmethod
-    def md_to_obj(cls, file_path=None, text='', columns=None,
-                  key_on=None, ignore_code_blocks=True, eval_cells=True):
+    def md_to_obj(cls, file_path=None, text='', ignore_code_blocks=True,
+                  eval_cells=True, **kwargs):
         """
         This will convert a mark down file to a seaborn table
-        :param file_path: str of the path to the file
-        :param text: str of the mark down text
-        :param columns: list of str of columns to use
-        :param key_on: list of str of columns to key on
+        :param file_path:   str of the path to the file
+        :param text:        str of the mark down text
         :param ignore_code_blocks: bool if true will filter out
             any lines between ```
-        :param eval_cells: bool if True will try to evaluate numbers
+        :param eval_cells:  bool if True will try to evaluate numbers
+        :param kwargs:      dictionary of values __init__ can take.
         :return: SeabornTable
         """
         return cls.mark_down_to_obj(file_path=file_path, text=text,
-                                    columns=columns, key_on=key_on,
                                     ignore_code_blocks=ignore_code_blocks,
-                                    eval_cells=eval_cells)
+                                    eval_cells=eval_cells, **kwargs)
 
     @classmethod
-    def mark_down_to_obj(cls, file_path=None, text='', columns=None,
-                         key_on=None, ignore_code_blocks=True, eval_cells=True):
+    def mark_down_to_obj(cls, file_path=None, text='', ignore_code_blocks=True,
+                         eval_cells=True, **kwargs):
         """
         This will convert a mark down file to a seaborn table
-         and return it
-        :param file_path: str of the path to the file
-        :param text: str of the mark down text
-        :param columns: list of str of columns to use
-        :param key_on: list of str of columns to key on
+        :param file_path:   str of the path to the file
+        :param text:        str of the mark down text
         :param ignore_code_blocks: bool if true will filter out
             any lines between ```
-        :param eval_cells: bool if True will try to evaluate numbers
+        :param eval_cells:  bool if True will try to evaluate numbers
+        :param kwargs:      dictionary of values __init__ can take.
         :return: SeabornTable
         """
         text = cls._get_lines(file_path, text, split_lines=False)
@@ -515,8 +543,7 @@ class SeabornTable(object):
                 'The following line is formatted correctly: %s' % row
             table.append([cls._clean_cell(cell, _eval=eval_cells)
                           for cell in row[1:-1].split('|')])
-        return cls(table=table[2:], columns=columns,
-                   key_on=key_on, row_columns=table[0])
+        return cls(table=table[2:], row_columns=table[0], **kwargs)
 
     @classmethod
     def objs_to_mark_down(cls, tables, file_path=None, keys=None,
@@ -565,7 +592,7 @@ class SeabornTable(object):
             data_kwargs=dict(quote_numbers=quote_numbers,
                              quote_empty_str=quote_empty_str,
                              title_columns=title_columns),
-            width_kwargs = dict(padding=1, pad_last_column=True))
+            width_kwargs=dict(padding=1, pad_last_column=True))
 
         md.insert(1, [u":" + u'-' * (width - 1) for width in column_widths])
         md = [u'| '.join([row[c].ljust(column_widths[c])
@@ -845,14 +872,14 @@ class SeabornTable(object):
 
     def obj_to_type(self, type, *args, **kwargs):
         if type not in self.KNOWN_FORMATS:
-            raise LookupError("Unknown format: %s"%type)
+            raise LookupError("Unknown format: %s" % type)
         method = getattr(self, 'obj_to_%s' % type)
         return method(*args, **kwargs)
 
     @classmethod
     def type_to_obj(cls, type, *args, **kwargs):
         if type not in cls.KNOWN_FORMATS:
-            raise LookupError("Unknown format: %s"%type)
+            raise LookupError("Unknown format: %s" % type)
         method = getattr(cls, '%s_to_obj' % type)
         return method(*args, **kwargs)
 
@@ -937,6 +964,29 @@ class SeabornTable(object):
         if isinstance(value, BASESTRING):
             value = (value,)
         self._key_on = value
+
+    @property
+    def column_key(self):
+        return self._column_key
+
+    @column_key.setter
+    def column_key(self, value):
+        """
+        :param value: str of which column to key the rows on like a dictionary
+        :return: None
+        """
+        self._column_key = value
+        if value:
+            self.update_column_key_values()
+
+    def update_column_key_values(self):
+        self._column_key_dict.clear()
+        if self.column_key not in self._column_index:
+            raise LookupError("Failed to find column_key: %s in columns: %s" % (
+                self.column_key, self.row_columns))
+        index = self._column_index[self.column_key]
+        for row in self:
+            self._column_key_dict[row[index]] = row
 
     @property
     def parameters(self):
@@ -1159,6 +1209,9 @@ class SeabornTable(object):
         assert text, 'Text is empty'
         return text
 
+    def __iter__(self):
+        return self.table.__iter__()
+
     def __str__(self):
         ret = self.obj_to_str()
         if sys.version_info[0] == 2:
@@ -1240,29 +1293,52 @@ class SeabornTable(object):
         elif isinstance(value, (tuple, list, dict)):
             return self._normalize_row(value) in self.table
 
+    def get(self, item, default=EMPTY_ROW_PLACE_HOLDER):
+        """
+            This is the same as a dictionary lookup but it requires
+            column_key to be set.
+        :param item: obj of the value to lookup
+        :param default: obj to return if lookup fails.  If the value is
+            EMPTY_ROW_PLACE_HOLDER it will return an newly created empty row
+        :return: row of the value returned
+        """
+        if self.column_key is None:
+            raise KeyError("column_key must be set before get can be called")
+        ret = self._column_key_dict.get(item, default)
+        if ret is EMPTY_ROW_PLACE_HOLDER:
+            ret = SeabornRow(column_index=self.column_index)
+        return ret
+
     def __getitem__(self, item):
         """
-            This will return a row if item is an int or if key_on is set
-            else it will return the column if column if it is in self._columns
+            If item is a slice it will return a list of self.table
+            If column_key is set it will treat the table as a dictionary and
+                return the last row with that key_on value.
+            If item is an int it will return the row of that index.
+            If key_on is set it will return the first row with all of the
+                matching items.
         :param item: int or str of the row or column to get
-        :return: list
+        :return: row or if slice a list of rows
         """
-        if isinstance(item, (int, slice)):
+        if isinstance(item, slice):
             return self.table[item]
-        else:
-            assert self.key_on
-            if not isinstance(item, (tuple, list)):
+        if self.column_key:
+            return self._column_key_dict[item]
+        elif isinstance(item, int):
+            return self.table[item]
+        elif self.key_on:
+            if isinstance(item, tuple):
+                item = list(item)
+            elif not isinstance(item, list):
                 item = [item]
-
             for row in self.table:
                 key = [row[k] for k in self.key_on]
                 if key == list(item):
                     return row
-
-            row = self.append()
-            for i, key in enumerate(self.key_on):
-                row[key] = item[i]
-            return row
+            return None
+        else:
+            raise KeyError("column_key or key_on must be set or item must be"
+                           " an int or slice")
 
     def __setitem__(self, item, value):
         """
@@ -1316,12 +1392,12 @@ class SeabornTable(object):
         self.table = []
 
     def copy(self, share_rows=False):
-        if share_rows:
-            return self.__class__(self.table, self.columns, self.row_columns,
-                                  self.tab, self.key_on, self.deliminator)
-        else:
-            return self.__class__(self, self.columns, self.row_columns,
-                                  self.tab, self.key_on, self.deliminator)
+        return self.__class__(self.table if share_rows else self,
+                              columns=self.columns,
+                              row_columns=self.row_columns, tab=self.tab,
+                              key_on=self.key_on,
+                              column_key=self.column_key,
+                              deliminator=self.deliminator)
 
     def set_column(self, item, value=None):
         if hasattr(value, '__call__'):
@@ -1431,8 +1507,8 @@ class SeabornTable(object):
         safe_str = data_kwargs.pop('safe_str', self._safe_str)
         list_of_list = [[safe_str(col, _is_header=True, **data_kwargs)
                          for col in self.columns]]
-        list_of_list+= [[safe_str(row[col], **data_kwargs)
-                         for col in self.columns] for row in self]
+        list_of_list += [[safe_str(row[col], **data_kwargs)
+                          for col in self.columns] for row in self]
         column_widths = self._get_column_widths(list_of_list, **width_kwargs)
         return list_of_list, column_widths
 
@@ -1453,7 +1529,6 @@ class SeabornTable(object):
                 if delta > 0 and (not shared_limit or delta <= shared_limit):
                     column_widths[i] = width
         return list_of_list, column_widths
-
 
     @classmethod
     def _safe_str(cls, cell, quote_numbers=True, repr_line_break=False,
@@ -1477,8 +1552,8 @@ class SeabornTable(object):
                 ret = cls._title_column(ret)
 
             if quote_numbers and (
-                    ret.replace(u'.', u'').isdigit() or
-                    ret in [u'False', u'True', 'False', 'True']):
+                        ret.replace(u'.', u'').isdigit() or
+                            ret in [u'False', u'True', 'False', 'True']):
                 ret = u'"%s"' % ret
             elif deliminator and deliminator in ret:
                 ret = u'"%s"' % ret
@@ -1490,6 +1565,7 @@ class SeabornTable(object):
         if repr_line_break:
             ret = ret.replace(u'\n', u'\\n')
         return ret
+
     @classmethod
     def _excel_cell(cls, cell, quote_everything=False, quote_numbers=True,
                     _is_header=False):

@@ -1,3 +1,19 @@
+Changes in 4.0.0
+================
+
+* Added the concept of column_key which will key the table on a single column.
+  This uses a hash instead of key_on's search feature, so it fast but it also
+  static as it needs ``update_column_key_values`` to be called if the key or
+  rows change.
+
+* Update all of the *_to_obj functions to use kwargs for standard __init__
+  variables.  This causes argument order to change which is the breaking change.
+
+* Added __iter__ method.
+
+* Added get method that uses column_key.
+
+
 Changes in 3.3.0
 ================
 

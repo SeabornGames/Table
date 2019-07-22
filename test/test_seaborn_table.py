@@ -1,7 +1,12 @@
+import os
 import unittest
+import time
+import logging
 
 from seaborn_table.table import SeabornTable
-from test.support import BaseTest, log
+from test.support import BaseTest
+
+log = logging.getLogger(__name__)
 
 
 class ExampleTableTest(BaseTest):
@@ -172,6 +177,51 @@ class ExampleTableTest(BaseTest):
         table.obj_to_txt(file_path=result_file, quote_texts=['None'])
         self.assert_result_file(expected_file, result_file)
         self.remove_file(result_file)
+
+    def test_column_key(self):
+        file = os.getenv('SEABORN_TABLE_LARGE_FILE')
+        if file:
+            start = time.time()
+            table = SeabornTable.file_to_obj(file)
+            end = time.time()
+            log.debug("Loading %s took %.2f seconds", file, end - start)
+            self.assertLess(end-start, 20)
+            table.column_key = table.columns[0]
+        else:
+            table = SeabornTable.str_to_obj(text=self.answer, deliminator=' | ',
+                                            tab='|', column_key='#')
+
+        for i in range(0, len(table), int(len(table) / 20) or 1):
+            expected_row = table.table[i]
+            start = time.time()
+            key = expected_row[0]
+            result_row = table[key]
+            end = time.time()
+            log.debug("test column key lookup took: %.2f seconds", end-start)
+            self.assertEqual(expected_row, result_row)
+
+    def test_column_key(self):
+        file = os.getenv('SEABORN_TABLE_LARGE_FILE')
+        if file:
+            start = time.time()
+            table = SeabornTable.file_to_obj(file)
+            end = time.time()
+            log.debug("Loading %s took %.2f seconds", file, end - start)
+            self.assertLess(end-start, 20)
+            table.column_key = table.columns[0]
+        else:
+            table = SeabornTable.str_to_obj(text=self.answer, deliminator=' | ',
+                                            tab='|', column_key='#')
+
+        for i in range(0, len(table), int(len(table) / 20) or 1):
+            expected_row = table.table[i]
+            start = time.time()
+            key = expected_row[0]
+            result_row = table.get(key)
+            end = time.time()
+            log.debug("test column key lookup took: %.2f seconds", end-start)
+            self.assertEqual(expected_row, result_row)
+
 
 if __name__ == '__main__':
     unittest.main()
