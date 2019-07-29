@@ -1,3 +1,9 @@
+Changes in 4.1.0
+================
+
+* txt_to_obj and str_to_obj default deliminator to \t but after parsing.
+
+
 Changes in 4.0.0
 ================
 

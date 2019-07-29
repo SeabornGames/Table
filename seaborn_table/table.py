@@ -344,14 +344,14 @@ class SeabornTable(object):
 
     @classmethod
     def txt_to_obj(cls, file_path=None, text='', remove_empty_rows=True,
-                   deliminator='\t', tab=None, eval_cells=True, **kwargs):
+                   deliminator=None, tab=None, eval_cells=True, **kwargs):
         """
         This will convert text file or text to a seaborn table
         and return it
         :param file_path:   str of the path to the file
         :param text:        str of the csv text
         :param remove_empty_rows: bool if True will remove empty rows
-        :param deliminator: str to use as a deliminator
+        :param deliminator: str to use as a deliminator, defaults to \t
         :param tab:         str to include before every row, also if the row
                             starts with it then it will be removed
         :param eval_cells:  bool if True will try to evaluate numbers
@@ -365,14 +365,14 @@ class SeabornTable(object):
 
     @classmethod
     def str_to_obj(cls, file_path=None, text='', remove_empty_rows=True,
-                   deliminator='\t', tab=None, eval_cells=True, **kwargs):
+                   deliminator=None, tab=None, eval_cells=True, **kwargs):
         """
         This will convert text file or text to a seaborn table
         and return it
         :param file_path:   str of the path to the file
         :param text:        str of the csv text
         :param remove_empty_rows: bool if True will remove empty rows
-        :param deliminator: str to use as a deliminator
+        :param deliminator: str to use as a deliminator, defaults to \t
         :param tab:         str to include before every row, also if the row
                             starts with it then it will be removed
         :param eval_cells:  bool if True will try to evaluate numbers
@@ -388,15 +388,19 @@ class SeabornTable(object):
                 if line and line.startswith(tab):
                     text[i] = line[len(tab):]
 
-        list_of_list = [[cls._eval_cell(cell, _eval=eval_cells)
-                         for cell in row.split(deliminator)]
-                        for row in text if not remove_empty_rows or
-                        True in [bool(r) for r in row]]
+        list_of_list = cls._merge_quoted_cells(
+            [row.split(deliminator) for row in text],
+            deliminator=deliminator or ' ',
+            remove_empty_rows=remove_empty_rows,
+            eval_cells=eval_cells,
+            excel_boolean=False)
+        deliminator = '\t' if deliminator is None else deliminator
 
         if list_of_list[0][0] == '' and list_of_list[0][-1] == '':
             list_of_list = [row[1:-1] for row in list_of_list]
         return cls.list_to_obj(list_of_list, tab=tab, deliminator=deliminator,
                                **kwargs)
+
 
     @classmethod
     def rst_to_obj(cls, file_path=None, text='', remove_empty_rows=True,
