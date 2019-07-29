@@ -344,14 +344,15 @@ class SeabornTable(object):
 
     @classmethod
     def txt_to_obj(cls, file_path=None, text='', remove_empty_rows=True,
-                   deliminator='\t', tab=None, eval_cells=True, **kwargs):
+                   deliminator=None, tab=None, eval_cells=True, **kwargs):
         """
         This will convert text file or text to a seaborn table
         and return it
         :param file_path:   str of the path to the file
         :param text:        str of the csv text
         :param remove_empty_rows: bool if True will remove empty rows
-        :param deliminator: str to use as a deliminator
+        :param deliminator: str to use as a deliminator, defaults to \t if
+                            present, else defaults to space
         :param tab:         str to include before every row, also if the row
                             starts with it then it will be removed
         :param eval_cells:  bool if True will try to evaluate numbers
@@ -365,14 +366,15 @@ class SeabornTable(object):
 
     @classmethod
     def str_to_obj(cls, file_path=None, text='', remove_empty_rows=True,
-                   deliminator='\t', tab=None, eval_cells=True, **kwargs):
+                   deliminator=None, tab=None, eval_cells=True, **kwargs):
         """
         This will convert text file or text to a seaborn table
         and return it
         :param file_path:   str of the path to the file
         :param text:        str of the csv text
         :param remove_empty_rows: bool if True will remove empty rows
-        :param deliminator: str to use as a deliminator
+        :param deliminator: str to use as a deliminator, defaults to \t if
+                            present, else defaults to space
         :param tab:         str to include before every row, also if the row
                             starts with it then it will be removed
         :param eval_cells:  bool if True will try to evaluate numbers
@@ -380,6 +382,9 @@ class SeabornTable(object):
         :return: SeabornTable
         """
         text = cls._get_lines(file_path, text)
+        if deliminator is None:
+            deliminator = '\t' if '\t' in text[0] else ' '
+
         if len(text) == 1:
             text = text[0].split('\r')
 
@@ -397,6 +402,7 @@ class SeabornTable(object):
             list_of_list = [row[1:-1] for row in list_of_list]
         return cls.list_to_obj(list_of_list, tab=tab, deliminator=deliminator,
                                **kwargs)
+
 
     @classmethod
     def rst_to_obj(cls, file_path=None, text='', remove_empty_rows=True,

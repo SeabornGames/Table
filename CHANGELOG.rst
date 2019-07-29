@@ -1,3 +1,10 @@
+Changes in 4.1.0
+================
+
+* txt_to_obj and str_to_obj default deliminator to \t only if present else
+  default to ' '.
+
+
 Changes in 4.0.0
 ================
 
