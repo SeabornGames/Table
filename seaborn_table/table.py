@@ -1387,16 +1387,16 @@ class SeabornTable(object):
         self.columns = [c for c in self.columns if c != column]
 
     def keys(self):
-        if not self.key_on:
-            raise LookupError("Method ``set_key`` or argument ``key_on`` must"
+        if not self.column_key:
+            raise LookupError("The member variable ``column_key`` must"
                               " be set before using this method")
         if not self._column_key_dict:
             self.update_column_key_values()
         return self._column_key_dict.keys()
 
     def items(self):
-        if not self.key_on:
-            raise LookupError("The member variable ``key_on`` must be set"
+        if not self.column_key:
+            raise LookupError("The member variable ``column_key`` must be set"
                               " before using this method")
         if not self._column_key_dict:
             self.update_column_key_values()
