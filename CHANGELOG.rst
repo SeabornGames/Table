@@ -1,3 +1,12 @@
+Changes in 5.0.0
+================
+
+* The method ``keys`` now returns the proper keys if key_on is set.
+    - This is a breaking change because keys was returning columns
+
+* Added method ``items`` which requires key_on to be set.
+
+
 Changes in 4.1.0
 ================
 
