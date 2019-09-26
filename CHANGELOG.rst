@@ -1,3 +1,18 @@
+Changes in 5.0.0
+================
+
+* ``__getitem__`` changed to only treat the table as a list.  Use the get method to
+  treat it as a dictionary.
+    - This is a breaking change.
+
+* Added method ``setdefault`` which treats the table as a dictionary.
+
+* The method ``keys`` now returns the proper keys if column_key is set.
+    - This is a breaking change because keys was returning columns
+
+* Added method ``items`` which requires column_key to be set.
+
+
 Changes in 4.1.0
 ================
 

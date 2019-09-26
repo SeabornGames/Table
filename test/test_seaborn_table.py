@@ -222,6 +222,11 @@ class ExampleTableTest(BaseTest):
             log.debug("test column key lookup took: %.2f seconds", end-start)
             self.assertEqual(expected_row, result_row)
 
+        for key, row in table.items():
+            self.assertEqual(table.get(key), row)
+
+        self.assertEqual(list(table.keys()), table.get_column(table.columns[0]))
+
 
 if __name__ == '__main__':
     unittest.main()

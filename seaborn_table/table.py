@@ -1297,52 +1297,14 @@ class SeabornTable(object):
         elif isinstance(value, (tuple, list, dict)):
             return self._normalize_row(value) in self.table
 
-    def get(self, item, default=EMPTY_ROW_PLACE_HOLDER):
-        """
-            This is the same as a dictionary lookup but it requires
-            column_key to be set.
-        :param item: obj of the value to lookup
-        :param default: obj to return if lookup fails.  If the value is
-            EMPTY_ROW_PLACE_HOLDER it will return an newly created empty row
-        :return: row of the value returned
-        """
-        if self.column_key is None:
-            raise KeyError("column_key must be set before get can be called")
-        ret = self._column_key_dict.get(item, default)
-        if ret is EMPTY_ROW_PLACE_HOLDER:
-            ret = SeabornRow(column_index=self.column_index)
-        return ret
-
     def __getitem__(self, item):
         """
-            If item is a slice it will return a list of self.table
-            If column_key is set it will treat the table as a dictionary and
-                return the last row with that key_on value.
-            If item is an int it will return the row of that index.
-            If key_on is set it will return the first row with all of the
-                matching items.
-        :param item: int or str of the row or column to get
+            This performs the getitem as if the table is a list,
+            to treat the table as dictionary use the get method.
+        :param item: int, slice of the row or column to get
         :return: row or if slice a list of rows
         """
-        if isinstance(item, slice):
-            return self.table[item]
-        if self.column_key:
-            return self._column_key_dict[item]
-        elif isinstance(item, int):
-            return self.table[item]
-        elif self.key_on:
-            if isinstance(item, tuple):
-                item = list(item)
-            elif not isinstance(item, list):
-                item = [item]
-            for row in self.table:
-                key = [row[k] for k in self.key_on]
-                if key == list(item):
-                    return row
-            return None
-        else:
-            raise KeyError("column_key or key_on must be set or item must be"
-                           " an int or slice")
+        return self.table[item]
 
     def __setitem__(self, item, value):
         """
@@ -1387,7 +1349,71 @@ class SeabornTable(object):
         self.columns = [c for c in self.columns if c != column]
 
     def keys(self):
-        return self.columns
+        if self.column_key is None:
+            raise LookupError("The member variable ``column_key`` must"
+                              " be set before using this method")
+        if not self._column_key_dict:
+            self.update_column_key_values()
+        return self._column_key_dict.keys()
+
+    def items(self):
+        if self.column_key is None:
+            raise LookupError("The member variable ``column_key`` must be set"
+                              " before using this method")
+        if not self._column_key_dict:
+            self.update_column_key_values()
+        return self._column_key_dict.items()
+
+    def get(self, item, default=EMPTY_ROW_PLACE_HOLDER):
+        """
+            This treats the table as a dictionary, but requires column_key or
+            key_on to be set.
+        :param item: obj of the value to lookup
+        :param default: obj to return if lookup fails.  If the value is
+            EMPTY_ROW_PLACE_HOLDER it will return an newly created empty row
+        :return: row of the value returned
+        """
+        if self.column_key is None and self.key_on is None:
+            raise LookupError("The member variable ``column_key`` or ``key_on"
+                              " must be set before using this method")
+        if self.column_key is not None:
+            ret = self._column_key_dict.get(item, default)
+        else:
+            if isinstance(item, tuple):
+                item = list(item)
+            elif not isinstance(item, list):
+                item = [item]
+            ret = default
+            for row in self.table:
+                key = [row[k] for k in self.key_on]
+                if key == item:
+                    ret = row
+                    break
+        if ret is EMPTY_ROW_PLACE_HOLDER:
+            ret = SeabornRow(column_index=self.column_index)
+        return ret
+
+    def setdefault(self, item, value):
+        row = self.get(item, None)
+        if row is None:
+            ret = SeabornRow(column_index=self.column_index)
+            self.table.append(ret)
+            if self.column_key:
+                ret[self.column_key] = item
+                self._column_key_dict[item] = ret
+            else:
+                if isinstance(item, tuple):
+                    item = list(item)
+                elif not isinstance(item, list):
+                    item = [item]
+                for i, _value in item:
+                    ret[self.key_on[i]] = _value
+            if isinstance(value, dict):
+                ret.update(value)
+            else:
+                for i, _value in enumerate(value):
+                    ret.data[i] = value
+        row.update(value)
 
     def has_key(self, item):
         return item in self.columns
