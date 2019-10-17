@@ -1,8 +1,18 @@
+Changes in 5.1.0
+================
+
+* SeabornRow is now a member of SeabornTable to make subclassing easier.
+
+* Added method ``add`` to SeabornTable for append a new row using **kwargs.
+
+* Added method ``dict_to_obj`` to SeabornRow.
+
+
 Changes in 5.0.0
 ================
 
-* ``__getitem__`` changed to only treat the table as a list.  Use the get method to
-  treat it as a dictionary.
+* ``__getitem__`` changed to only treat the table as a list.  Use the get method
+  to treat it as a dictionary.
     - This is a breaking change.
 
 * Added method ``setdefault`` which treats the table as a dictionary.
