@@ -1470,13 +1470,13 @@ class SeabornTable(object):
                     ret = row
                     break
         if ret is EMPTY_ROW_PLACE_HOLDER:
-            ret = self.SeabornRow(column_index=self.column_index)
+            ret = self.SeabornRow(column_index=self._column_index)
         return ret
 
     def setdefault(self, item, value):
         row = self.get(item, None)
         if row is None:
-            ret = self.SeabornRow(column_index=self.column_index)
+            ret = self.SeabornRow(column_index=self._column_index)
             self.table.append(ret)
             if self.column_key:
                 ret[self.column_key] = item
