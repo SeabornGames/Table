@@ -26,7 +26,84 @@ from functools import reduce
 EMPTY_ROW_PLACE_HOLDER = object()
 
 
+class SeabornRow(list):
+    def __init__(self, column_index, values=None):
+        values = [] if values is None else values
+        super(SeabornRow, self).__init__(
+            values + [None] * (len(column_index) - len(values)))
+        self.column_index = column_index
+
+    def __getitem__(self, item):
+        if isinstance(item, (int, slice)):
+            return list.__getitem__(self, item)
+        else:
+            return list.__getitem__(self, self.column_index[item])
+
+    def __setitem__(self, item, value):
+        if isinstance(item, int):
+            return list.__setitem__(self, item, value)
+        else:
+            return list.__setitem__(self, self.column_index[item], value)
+
+    @property
+    def columns(self):
+        return self.column_index.keys()
+
+    def __repr__(self):
+        return super(SeabornRow, self).__repr__()
+
+    def __str__(self):
+        return super(SeabornRow, self).__str__()
+
+    @classmethod
+    def dict_to_obj(cls, column_index, kwargs):
+        return cls.__init__(column_index, [kwargs.get(k) for k in column_index])
+
+    def obj_to_dict(self, columns=None):
+        columns = columns if columns else self.column_index.keys()
+        return {col: list.__getitem__(self, self.column_index[col])
+                for col in columns}
+
+    def obj_to_ordered_dict(self, columns=None):
+        columns = columns if columns else self.column_index.keys()
+        return OrderedDict([
+            (col, list.__getitem__(self, self.column_index[col]))
+            for col in columns])
+
+    def get(self, key, default=None):
+        index = self.column_index.get(key, None)
+        key = index if index is not None else key
+        if isinstance(key, int) and key < len(self):
+            return list.__getitem__(self, key)
+        else:
+            return default
+
+    def update(self, dict_):
+        """
+            This will update the row values if the columns exist
+        :param dict_: dict of values to update
+        :return: None
+        """
+        for key, value in dict_.items():
+            index = self.column_index.get(key, None)
+            if index is not None:
+                list.__setitem__(self, index, value)
+
+    def copy(self):
+        return SeabornRow(self.column_index, list(self) + [])
+
+    def append(self, value):
+        list.append(self, value)
+
+    def __nonzero__(self):
+        for cell in self:
+            if cell:
+                return True
+        return False
+
+
 class SeabornTable(object):
+    SeabornRow = SeabornRow
     KNOWN_FORMATS = ['md', 'txt', 'psql', 'rst', 'html', 'grid', 'json', 'csv']
     DEFAULT_DELIMINATOR = u'\t'
     DEFAULT_TAB = u''
@@ -87,9 +164,9 @@ class SeabornTable(object):
         elif isinstance(table, SeabornTable):
             columns = columns or table.columns.copy()
             self.row_columns = table.row_columns
-            self.table = [SeabornRow(self._column_index, list(row) + [])
+            self.table = [self.SeabornRow(self._column_index, list(row) + [])
                           for row in table]
-        elif isinstance(table, list) and isinstance(table[0], SeabornRow):
+        elif isinstance(table, list) and isinstance(table[0], self.SeabornRow):
             self._column_index = table[0].column_index
             self._row_columns = list(table[0].column_index.keys())
             self.table = table
@@ -106,7 +183,7 @@ class SeabornTable(object):
         elif getattr(table, 'headings', None) is not None and \
                         getattr(table, 'row_columns', None) is not None:
             self.row_columns = row_columns or columns or table.headings
-            self.table = [SeabornRow(self._column_index,
+            self.table = [self.SeabornRow(self._column_index,
                                      [row[c] for c in self.row_columns])
                           for row in table]
         else:
@@ -151,7 +228,7 @@ class SeabornTable(object):
         if getattr(list_[0], 'keys', None) and not isinstance(list_[0], dict):
             row_columns = row_columns or columns or list_[0].keys()
             column_index = cls._create_column_index(row_columns)
-            table = [SeabornRow(
+            table = [cls.SeabornRow(
                 column_index,
                 [getattr(row, col, None) for col in row_columns])
                 for row in list_]
@@ -161,7 +238,7 @@ class SeabornTable(object):
                                               cls._get_normalized_columns(
                                                   list_))
             column_index = cls._create_column_index(row_columns)
-            table = [SeabornRow(column_index,
+            table = [cls.SeabornRow(column_index,
                                 [row.get(c, None) for c in row_columns])
                      for row in list_]
 
@@ -170,7 +247,7 @@ class SeabornTable(object):
                           cls._key_on_columns(key_on, [
                               'Column %s' % i for i in range(len(list_[0]))])
             column_index = cls._create_column_index(row_columns)
-            table = [SeabornRow(column_index, row) for row in list_]
+            table = [cls.SeabornRow(column_index, row) for row in list_]
 
         elif isinstance(list_[0], (list, tuple)):
             row_columns = row_columns or list_[0]
@@ -178,11 +255,11 @@ class SeabornTable(object):
                 list_ = list_[1:]
             column_index = cls._create_column_index(row_columns)
             size = len(row_columns)
-            table = [SeabornRow(column_index, row + [None] * (size - len(row)))
+            table = [cls.SeabornRow(column_index, row + [None] * (size - len(row)))
                      for row in list_]
         else:
             column_index = cls._create_column_index(columns or [])
-            table = [SeabornRow(column_index, [row]) for row in list_]
+            table = [cls.SeabornRow(column_index, [row]) for row in list_]
 
         return cls(table, columns=columns, row_columns=row_columns,
                    key_on=key_on, **kwargs)
@@ -204,10 +281,10 @@ class SeabornTable(object):
             column_index = cls._create_column_index(row_columns)
             if key_on is None:
                 table = [
-                    SeabornRow(column_index, [row[c] for c in row_columns])
+                    cls.SeabornRow(column_index, [row[c] for c in row_columns])
                     for row in dict_.values()]
             else:
-                table = [SeabornRow(column_index,
+                table = [cls.SeabornRow(column_index,
                                     [row.get(c, c == key_on and key or None)
                                      for c in row_columns])
                          for key, row in dict_.items()]
@@ -218,17 +295,17 @@ class SeabornTable(object):
             column_index = cls._create_column_index(row_columns)
             if key_on is None:
                 table = [
-                    SeabornRow(column_index, [dict_[c][i] for c in columns])
+                    cls.SeabornRow(column_index, [dict_[c][i] for c in columns])
                     for i in range(len(dict_[columns[0]]))]
             else:
                 table = [
-                    SeabornRow(column_index, [dict_[c][i] for c in columns])
+                    cls.SeabornRow(column_index, [dict_[c][i] for c in columns])
                     for i in range(len(dict_[columns[0]]))]
 
         else:
             row_columns = row_columns or columns or ['KEY', 'VALUE']
             column_index = cls._create_column_index(row_columns)
-            table = [SeabornRow(column_index, [k, v]) for k, v in
+            table = [cls.SeabornRow(column_index, [k, v]) for k, v in
                      dict_.items()]
 
         return cls(table, columns=columns, row_columns=row_columns,
@@ -410,7 +487,6 @@ class SeabornTable(object):
         :param file_path:   str of the path to the file
         :param text:        str of the csv text
         :param remove_empty_rows: bool if True will remove empty rows
-        :param key_on:      list of str of columns to key on
         :param deliminator: str to use as a deliminator
         :param eval_cells:  bool if True will try to evaluate numbers
         :param kwargs:      dictionary of values __init__ can take.
@@ -437,9 +513,7 @@ class SeabornTable(object):
         This will convert a psql file or text to a seaborn table
         :param file_path:   str of the path to the file
         :param text:        str of the csv text
-        :param columns:     list of str of columns to use
         :param remove_empty_rows: bool if True will remove empty rows
-        :param key_on:      list of str of columns to key on
         :param deliminator: str to use as a deliminator
         :param eval_cells:  bool if True will try to evaluate numbers
         :param kwargs:      dictionary of values __init__ can take.
@@ -466,10 +540,7 @@ class SeabornTable(object):
         This will convert a html file or text to a seaborn table
         :param file_path:   str of the path to the file
         :param text:        str of the csv text
-        :param columns:     list of str of columns to use
-        :param remove_empty_rows: bool if True will remove empty rows
-        :param key_on:      list of str of columns to key on
-        :param deliminator: str to use as a deliminator
+        :param ignore_code_blocks: bool
         :param eval_cells:  bool if True will try to evaluate numbers
         :param kwargs:      dictionary of values __init__ can take.
         :return: SeabornTable
@@ -612,7 +683,7 @@ class SeabornTable(object):
         """
         This will return a simple str table.
         :param file_path:       str of the path to the file
-        :param keys:            list of str of the order of keys to use
+        :param deliminator:     str to separate values
         :param tab:             string of offset of the table
         :param quote_numbers:   bool if True will quote numbers that are strings
         :param quote_empty_str: bool if True will quote empty strings
@@ -632,7 +703,7 @@ class SeabornTable(object):
         """
         This will return a simple str table.
         :param file_path:       str of the path to the file
-        :param keys:            list of str of the order of keys to use
+        :param deliminator:     str to separate values
         :param tab:             string of offset of the table
         :param quote_numbers:   bool if True will quote numbers that are strings
         :param quote_empty_str: bool if True will quote empty strings
@@ -664,7 +735,7 @@ class SeabornTable(object):
         """
         This will return a str of a rst table.
         :param file_path:       str of the path to the file
-        :param keys:            list of str of the order of keys to use
+        :param deliminator:     str to separate values
         :param tab:             string of offset of the table
         :param quote_numbers:   bool if True will quote numbers that are strings
         :param quote_empty_str: bool if True will quote empty strings
@@ -691,7 +762,6 @@ class SeabornTable(object):
         This will return a str of a psql table.
         :param file_path:       str of the path to the file
         :param deliminator:     str of the bar separating columns
-        :param keys:            list of str of the order of keys to use
         :param tab:             string of offset of the table
         :param quote_numbers:   bool if True will quote numbers that are strings
         :param quote_empty_str: bool if True will quote empty strings
@@ -1095,10 +1165,20 @@ class SeabornTable(object):
         """
             This will add a row to the table
         :param row: obj, list, or dictionary
-        :return: SeabornRow that was added to the table
+        :return: self.SeabornRow that was added to the table
         """
         self.table.append(self._normalize_row(row))
         return self.table[-1]
+
+
+    def add(self, **kwargs):
+        """
+            This will create a new row and add it to the table
+        :param kwargs: values for the row
+        :return: newly created row
+        """
+        new_row = self.SeabornRow.dict_to_obj(self._column_index, kwargs)
+        return self.append(new_row)
 
     def remove(self, row):
         assert row in self.table, 'Row %s was not in this table' % row
@@ -1130,7 +1210,7 @@ class SeabornTable(object):
                   max_size=1000):
         """
         :param pertibate_columns: list of str fo columns to pertibate see DOE
-        :param filter_func: func that takes a SeabornRow and return
+        :param filter_func: func that takes a self.SeabornRow and return
                             True if this row should be exist
         :param max_size: int of the max number of rows to try
                             but some may be filtered out
@@ -1147,7 +1227,7 @@ class SeabornTable(object):
         max_size = min(max_size, reduce(lambda x, y: x * y, column_size))
 
         for indexes in self._index_iterator(column_size, max_size):
-            row = SeabornRow(self._column_index,
+            row = self.SeabornRow(self._column_index,
                              [self._pertibate_value(indexes.pop(0), c) for
                               c in self.columns])
 
@@ -1236,7 +1316,7 @@ class SeabornTable(object):
         new_table = []
         for row in self.table + other.table:
             new_table.append(
-                SeabornRow(column_index,
+                self.SeabornRow(column_index,
                            [row.get(c, None) for c in column_index]))
 
         return self.__class__(table=new_table, columns=self.columns)
@@ -1273,7 +1353,7 @@ class SeabornTable(object):
         return len(self.table)
 
     def __contains__(self, value):
-        if not isinstance(value, (tuple, list, dict, SeabornRow)) and \
+        if not isinstance(value, (tuple, list, dict, self.SeabornRow)) and \
                 self.key_on and len(self.key_on) == 1:
             value = [value]
 
@@ -1284,10 +1364,10 @@ class SeabornTable(object):
                 if key == list(value):
                     return True
             return False
-        elif (isinstance(value, SeabornRow) and
+        elif (isinstance(value, self.SeabornRow) and
                       getattr(value, 'column_index') == self._column_index):
             return value in self.table
-        elif isinstance(value, SeabornRow):
+        elif isinstance(value, self.SeabornRow):
             value = [value[k] for k in self.row_columns]
             for row in self.table:
                 if [row[k] for k in self.row_columns] == value:
@@ -1390,13 +1470,13 @@ class SeabornTable(object):
                     ret = row
                     break
         if ret is EMPTY_ROW_PLACE_HOLDER:
-            ret = SeabornRow(column_index=self.column_index)
+            ret = self.SeabornRow(column_index=self.column_index)
         return ret
 
     def setdefault(self, item, value):
         row = self.get(item, None)
         if row is None:
-            ret = SeabornRow(column_index=self.column_index)
+            ret = self.SeabornRow(column_index=self.column_index)
             self.table.append(ret)
             if self.column_key:
                 ret[self.column_key] = item
@@ -1488,8 +1568,8 @@ class SeabornTable(object):
 
     def sort_by_key(self, keys=None, string_comparison=False):
         """
-        :param keys: list of str to sort by, if name starts with -
-            reverse order
+        :param keys: list of str to sort by, if name starts with - reverse order
+        :param string_comparison: bool if True compares a str(value)
         :return: None
         """
         keys = keys or self.key_on
@@ -1863,84 +1943,13 @@ class SeabornTable(object):
     def _normalize_row(self, row):
         if row is None:
             values = [None] * len(self.row_columns)
-        elif isinstance(row, (dict, SeabornRow)):
+        elif isinstance(row, (dict, self.SeabornRow)):
             values = [row.get(k, None) for k in self.row_columns]
         elif not isinstance(row, list):
             values = [getattr(row, k, None) for k in self.row_columns]
         else:
             values = row + [None] * (len(row) - len(self.row_columns))
-        return SeabornRow(self._column_index, values)
-
-
-class SeabornRow(list):
-    def __init__(self, column_index, values):
-        super(SeabornRow, self).__init__(
-            values + [None] * (len(column_index) - len(values)))
-        self.column_index = column_index
-
-    def __getitem__(self, item):
-        if isinstance(item, (int, slice)):
-            return list.__getitem__(self, item)
-        else:
-            return list.__getitem__(self, self.column_index[item])
-
-    def __setitem__(self, item, value):
-        if isinstance(item, int):
-            return list.__setitem__(self, item, value)
-        else:
-            return list.__setitem__(self, self.column_index[item], value)
-
-    @property
-    def columns(self):
-        return self.column_index.keys()
-
-    def __repr__(self):
-        return super(SeabornRow, self).__repr__()
-
-    def __str__(self):
-        return super(SeabornRow, self).__str__()
-
-    def obj_to_dict(self, columns=None):
-        columns = columns if columns else self.column_index.keys()
-        return {col: list.__getitem__(self, self.column_index[col])
-                for col in columns}
-
-    def obj_to_ordered_dict(self, columns=None):
-        columns = columns if columns else self.column_index.keys()
-        return OrderedDict([
-            (col, list.__getitem__(self, self.column_index[col]))
-            for col in columns])
-
-    def get(self, key, default=None):
-        index = self.column_index.get(key, None)
-        key = index if index is not None else key
-        if isinstance(key, int) and key < len(self):
-            return list.__getitem__(self, key)
-        else:
-            return default
-
-    def update(self, dict_):
-        """
-            This will update the row values if the columns exist
-        :param dict_: dict of values to update
-        :return: None
-        """
-        for key, value in dict_.items():
-            index = self.column_index.get(key, None)
-            if index is not None:
-                list.__setitem__(self, index, value)
-
-    def copy(self):
-        return SeabornRow(self.column_index, list(self) + [])
-
-    def append(self, value):
-        list.append(self, value)
-
-    def __nonzero__(self):
-        for cell in self:
-            if cell:
-                return True
-        return False
+        return self.SeabornRow(self._column_index, values)
 
 
 class HTMLRowRespan(object):
