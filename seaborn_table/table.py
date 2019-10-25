@@ -133,18 +133,21 @@ class SeabornTable(object):
     }
 
     def __init__(self, table=None, columns=None, row_columns=None, tab=None,
-                 key_on=None, column_key=None, deliminator=None):
+                 key_on=None, column_key=None, deliminator=None,
+                 validate=True):
         """
-        :param table: obj can be list of list or list of dict
-        :param columns: list of str of the columns in the table
-        :param row_columns: list of str if different then visible columns
-        :param tab: str to include before every row
-        :param key_on: str, tuple, or list if assigned the table can be treated
-            as a dictionary.  This is slow but dynamic.
-        :param column_key: str if assigned the table can be treated as a
-            dictionary.  This is slow but static, it can be updated with
-            update_column_key_values.
-        :param deliminator: str to separate the columns such as , \t or |
+        :param table:        obj can be list of list or list of dict
+        :param columns:      list of str of the columns in the table
+        :param row_columns:  list of str if different then visible columns
+        :param tab:          str to include before every row
+        :param key_on:       str, tuple, or list if assigned the table can be
+                             treated as a dictionary.  This is slow but dynamic.
+        :param column_key:   str if assigned the table can be treated as a
+                             dictionary.  This is slow but static, it can be
+                             updated with update_column_key_values.
+        :param deliminator:  str to separate the columns such as , \t or |
+        :param validate:     bool if True will validate the row, columns and
+                             headers for proper indexing
         """
         self._deliminator = self.DEFAULT_DELIMINATOR
         self._tab = self.DEFAULT_TAB
@@ -203,7 +206,8 @@ class SeabornTable(object):
         self._column_key_dict = {}
         self._column_key = None
         self.column_key = column_key
-        self.assert_valid()
+        if validate:
+            self.assert_valid()
 
     @classmethod
     def list_to_obj(cls, list_, columns=None, row_columns=None, key_on=None,

@@ -5,6 +5,8 @@ Changes in 6.0.0
 
 * Replaced ``space_columns`` in obj_to_csv with ``align``.
 
+* Added validate option to SeabornTable to skip validating.
+
 
 Changes in 5.1.0
 ================
