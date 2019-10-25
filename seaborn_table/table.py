@@ -916,7 +916,7 @@ class SeabornTable(object):
 
     def obj_to_html(self, file_path=None, tab='', border=1, cell_padding=5,
                     cell_spacing=1, border_color='black', align='center',
-                    row_span=None, quote_numbers=True, quote_empty_str=False):
+                    row_span=None, quote_numbers=True, **kwargs):
         """
         This will return a str of an html table.
         :param file_path:       str for path to the file
@@ -966,12 +966,11 @@ class SeabornTable(object):
         method = getattr(cls, '%s_to_obj' % type)
         return method(*args, **kwargs)
 
-    def obj_to_file(self, file_path, quote_numbers=True):
+    def obj_to_file(self, file_path, **kwargs):
         for file_type in self.KNOWN_FORMATS:
             if file_path.endswith('.%s' % file_type):
                 obj_to_type = getattr(self, 'obj_to_%s' % file_type)
-                return obj_to_type(file_path=file_path,
-                                   quote_numbers=quote_numbers)
+                return obj_to_type(file_path=file_path, **kwargs)
         raise Exception('Unknown file type: %s' % file_path)
 
     def share_column_widths(self, tables, shared_limit=None):
