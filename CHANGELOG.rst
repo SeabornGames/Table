@@ -1,3 +1,11 @@
+Changes in 6.0.0
+================
+
+* Added ``align`` with values left, right, center, none to align cells.
+
+* Replaced ``space_columns`` in obj_to_csv with ``align``.
+
+
 Changes in 5.1.0
 ================
 
