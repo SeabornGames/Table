@@ -622,7 +622,7 @@ class SeabornTable(object):
     @classmethod
     def objs_to_mark_down(cls, tables, file_path=None, keys=None,
                           pretty_columns=True, quote_numbers=True,
-                          align='left'):
+                          align='left', pad_last_column=True):
         """
         This will return a str of multiple mark down tables.
         :param tables:         dict of {str <name>:SeabornTable}
@@ -632,19 +632,20 @@ class SeabornTable(object):
         :param quote_numbers:  bool if True will quote numbers that are strings
         :param align:           str of 'left', 'right', 'center', 'none' to
                                 align the text within the cells.
+        :param pad_last_column: bool if True will space the last column
         :return:               str of the converted markdown tables
         """
         keys = keys or tables.keys()
         ret = ['#### ' + key + '\n' + tables[key].obj_to_mark_down(
             pretty_columns=pretty_columns, quote_numbers=quote_numbers,
-            align=align)
+            align=align, pad_last_column=pad_last_column)
                for key in keys]
         ret = '\n\n'.join(ret)
         cls._save_file(file_path, ret)
         return ret
 
     def obj_to_md(self, file_path=None, title_columns=False,
-                  quote_numbers=True, align='left'):
+                  quote_numbers=True, align='left', pad_last_column=True):
         """
         This will return a str of a mark down tables.
         :param title_columns: bool if True will title all headers
@@ -652,16 +653,18 @@ class SeabornTable(object):
         :param quote_numbers:  bool if True will quote numbers that are strings
         :param align:           str of 'left', 'right', 'center', 'none' to
                                 align the text within the cells.
+        :param pad_last_column: bool if True will space the last column
         :return: str
         """
         return self.obj_to_mark_down(file_path=file_path,
                                      title_columns=title_columns,
                                      quote_numbers=quote_numbers,
-                                     align=align)
+                                     align=align,
+                                     pad_last_column=pad_last_column)
 
     def obj_to_mark_down(self, file_path=None, title_columns=False,
                          quote_numbers=True, quote_empty_str=False,
-                         align='left'):
+                         align='left', pad_last_column=True):
         """
         This will return a str of a mark down table.
         :param title_columns:   bool if True will title all headers
@@ -670,13 +673,14 @@ class SeabornTable(object):
         :param quote_empty_str: bool if True will quote empty strings
         :param align:           str of 'left', 'right', 'center', 'none' to
                                 align the text within the cells.
+        :param pad_last_column: bool if True will space the last column
         :return: str
         """
         md, column_widths = self.get_data_and_shared_column_widths(
             data_kwargs=dict(quote_numbers=quote_numbers,
                              quote_empty_str=quote_empty_str,
                              title_columns=title_columns),
-            width_kwargs=dict(padding=1, pad_last_column=True))
+            width_kwargs=dict(padding=1, pad_last_column=pad_last_column))
 
         md.insert(1, [u":" + u'-' * (width - 1) for width in column_widths])
         md = [u'| '.join(row) for row in self._align_cells(
@@ -687,7 +691,7 @@ class SeabornTable(object):
 
     def obj_to_txt(self, file_path=None, deliminator=None, tab=None,
                    quote_numbers=True, quote_empty_str=False,
-                   quote_texts=None, pad_last_column=False, align='left'):
+                   quote_texts=None, pad_last_column=None, align='left'):
         """
         This will return a simple str table.
         :param file_path:       str of the path to the file
@@ -701,6 +705,9 @@ class SeabornTable(object):
                                 align the text within the cells.
         :return:                str of the converted markdown tables
         """
+        if align == 'center' or align == 'right' and pad_last_column==None:
+            pad_last_column = True
+
         return self.obj_to_str(file_path=file_path, deliminator=deliminator,
                                tab=tab, quote_numbers=quote_numbers,
                                quote_empty_str=quote_empty_str,
@@ -710,7 +717,7 @@ class SeabornTable(object):
 
     def obj_to_str(self, file_path=None, deliminator=None, tab=None,
                    quote_numbers=True, quote_empty_str=False,
-                   quote_texts=None, pad_last_column=False, align='left'):
+                   quote_texts=None, pad_last_column=None, align='left'):
         """
         This will return a simple str table.
         :param file_path:       str of the path to the file
@@ -724,6 +731,8 @@ class SeabornTable(object):
                                 align the text within the cells.
         :return:                str of the converted markdown tables
         """
+        if align == 'center' or align == 'right' and pad_last_column==None:
+            pad_last_column = True
         deliminator = self.deliminator if deliminator is None \
             else deliminator
         tab = self.tab if tab is None else tab
@@ -742,7 +751,8 @@ class SeabornTable(object):
         return ret
 
     def obj_to_rst(self, file_path=None, deliminator='  ', tab=None,
-                   quote_numbers=True, quote_empty_str=False, align='left'):
+                   quote_numbers=True, quote_empty_str=False, align='left',
+                   pad_last_column=True):
         """
         This will return a str of a rst table.
         :param file_path:       str of the path to the file
@@ -752,6 +762,7 @@ class SeabornTable(object):
         :param quote_empty_str: bool if True will quote empty strings
         :param align:           str of 'left', 'right', 'center', 'none' to
                                 align the text within the cells.
+        :param pad_last_column: bool if True will space the last column
         :return:                str of the converted markdown tables
         """
         tab = self.tab if tab is None else tab
@@ -759,7 +770,7 @@ class SeabornTable(object):
             data_kwargs=dict(quote_numbers=quote_numbers,
                              quote_empty_str=quote_empty_str,
                              deliminator=' '),
-            width_kwargs=dict(padding=0, pad_last_column=True))
+            width_kwargs=dict(padding=0, pad_last_column=pad_last_column))
         ret = self._align_cells(align, align, column_widths, list_of_list)
         bar = deliminator.join(['=' * width for width in column_widths])
         ret = [deliminator.join(row) for row in ret]
@@ -769,7 +780,8 @@ class SeabornTable(object):
         return ret
 
     def obj_to_psql(self, file_path=None, deliminator=' | ', tab=None,
-                    quote_numbers=True, quote_empty_str=False, align='left'):
+                    quote_numbers=True, quote_empty_str=False, align='left',
+                    pad_last_column=None):
         """
         This will return a str of a psql table.
         :param file_path:       str of the path to the file
@@ -779,13 +791,17 @@ class SeabornTable(object):
         :param quote_empty_str: bool if True will quote empty strings
         :param align:           str of 'left', 'right', 'center', 'none' to
                                 align the text within the cells.
+        :param pad_last_column: bool if True will space the last column
         :return:                str of the converted markdown tables
         """
+        if align == 'center' or align == 'right' and pad_last_column==None:
+            pad_last_column = True
         tab = self.tab if tab is None else tab
         list_of_list, column_widths = self.get_data_and_shared_column_widths(
             data_kwargs=dict(quote_numbers=quote_numbers,
                              quote_empty_str=quote_empty_str),
-            width_kwargs=dict(padding=0, pad_first_cell=1))
+            width_kwargs=dict(padding=0, pad_first_cell=1,
+                              pad_last_column=pad_last_column))
         for row in list_of_list:
             row[0] = ' ' + row[0]
         if len(column_widths) > 1:
@@ -828,7 +844,8 @@ class SeabornTable(object):
         return ret
 
     def obj_to_grid(self, file_path=None, delim=None, tab=None,
-                    quote_numbers=True, quote_empty_str=False, align='left'):
+                    quote_numbers=True, quote_empty_str=False, align='left',
+                    pad_last_column=True):
         """
         This will return a str of a grid table.
         :param file_path:       path to data file, defaults to
@@ -840,10 +857,10 @@ class SeabornTable(object):
         :param quote_empty_str: bool if True will quote empty strings
         :param align:           str of 'left', 'right', 'center', 'none' to
                                 align the text within the cells.
+        :param pad_last_column: bool if True will space the last column
         :return:                string representing the grid formation
                                 of the relevant data
         """
-
         div_delims = {"top": ['top left corner', 'top intersect',
                               'top edge', 'top right corner'],
                       "divide": ['left major intersect',
@@ -862,7 +879,7 @@ class SeabornTable(object):
         list_of_list, column_widths = self.get_data_and_shared_column_widths(
             data_kwargs=dict(quote_numbers=quote_numbers,
                              quote_empty_str=quote_empty_str),
-            width_kwargs=dict(padding=0, pad_last_column=True))
+            width_kwargs=dict(padding=0, pad_last_column=pad_last_column))
 
         ret = self._align_cells(align, align, column_widths, list_of_list)
         grid_row = {}
@@ -886,7 +903,8 @@ class SeabornTable(object):
         return ret
 
     def obj_to_csv(self, file_path=None, quote_everything=False,
-                   align='left', quote_numbers=True):
+                   align='left', quote_numbers=True,
+                   pad_last_column=None):
         """
         This will return a str of a csv text that is friendly to excel
         :param file_path:        str to the path
@@ -898,11 +916,13 @@ class SeabornTable(object):
                                  align the text within the cells.
         :return: str
         """
+        if align == 'center' or align == 'right' and pad_last_column==None:
+            pad_last_column = True
         list_of_list, column_widths = self.get_data_and_shared_column_widths(
             data_kwargs=dict(quote_numbers=quote_numbers,
                              quote_everything=quote_everything,
                              safe_str=self._excel_cell),
-            width_kwargs=dict(padding=0))
+            width_kwargs=dict(padding=0, pad_last_column=pad_last_column))
         csv = [','.join(row) for row in self._align_cells(
             align, align, column_widths, list_of_list)]
 
