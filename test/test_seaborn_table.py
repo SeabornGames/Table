@@ -114,7 +114,7 @@ class ExampleTableTest(BaseTest):
                               [1, '2\n2', '3'],
                               ['4', '5', '"Verdi: "Aida""']])
         result_file = self.test_data_path('_result', 'test_excel_csv.csv')
-        table.obj_to_csv(space_columns=True, file_path=result_file)
+        table.obj_to_csv(file_path=result_file)
         table2 = SeabornTable.csv_to_obj(file_path=result_file)
         table2.naming_convention_columns("underscore")
         log.debug('\nAnswer:\n%s\n\nResult:\n%s\n\n' % (
