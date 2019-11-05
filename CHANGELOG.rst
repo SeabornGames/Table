@@ -1,3 +1,9 @@
+Changes in 6.0.1
+================
+
+* Fixed bug in SeabornRow.dict_to_obj.
+
+
 Changes in 6.0.0
 ================
 

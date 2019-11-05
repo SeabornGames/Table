@@ -56,7 +56,8 @@ class SeabornRow(list):
 
     @classmethod
     def dict_to_obj(cls, column_index, kwargs):
-        return cls.__init__(column_index, [kwargs.get(k) for k in column_index])
+        values = [kwargs.get(k) for k in column_index]
+        return cls(column_index=column_index, values=values)
 
     def obj_to_dict(self, columns=None):
         columns = columns if columns else self.column_index.keys()
