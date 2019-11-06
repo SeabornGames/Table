@@ -58,7 +58,8 @@ class HeaderOnlyTest(BaseTest, FormatMixin):
             'TEST COL 1', 'TEST COL TWO', 'LAST COL'])
         text = expected.obj_to_type(source)
         result = SeabornTable.type_to_obj(source, text=text)
-        expected_file = self.test_data_path('expected', 'header_only.%s'%source)
+        expected_file = self.test_data_path('expected',
+                                            'header_only.%s' % source)
         result_file = self.test_data_path('_header_only',
                                           'header_only.%s' % source)
         expected.obj_to_file(expected_file)
@@ -81,7 +82,7 @@ class SharedColumnTest(BaseTest, FormatMixin):
             for i in range(4)]
         for table in tables:
             table.share_column_widths(tables, self.SHARED_LIMIT)
-        basename = self.BASENAME%source
+        basename = self.BASENAME % source
         expected_file = self.test_data_path('expected', basename)
         result_file = self.test_data_path('_shared', basename)
         with open(result_file, 'w') as fn:
@@ -108,6 +109,36 @@ class SharedColumnLimitTest(SharedColumnTest):
 class SharedColumnLimitTest(SharedColumnTest):
     SHARED_LIMIT = None
     BASENAME = 'test_share_columns_0.%s'
+
+
+class LineBreakTest(BaseTest, FormatMixin):
+    BASENAME = 'test_line_break.%s'
+
+    def validate_test_condition(self, source):
+        data = [['cell 1, 1.0\ncell 1, 1.1',
+                 'cell 1, 2',
+                 'cell 1, 3'],
+                ['cell 2, 1',
+                 'cell 2, 2.0\ncell 2, 2.1\ncell 2, 2.2',
+                 'cell 2, 3'],
+                ['cell 3, 1',
+                 'cell 3, 2',
+                 'cell 3, 3.0\ncell 3, 3.1\ncell 3, 3.2\ncell 3, 3.3'],
+                ['cell 4, 1.0\n               cell 4, 1.1',
+                 'cell 4, 2.0\ncell 4, 2.1',
+                 'cell 4, 3.0\ncell 4, 3.1\ncell 4, 3.2'],
+                ['cell 5, 1',
+                 'cell 5, 2',
+                 'cell 5, 3']]
+        table = SeabornTable(data, row_columns=['Header 1',
+                                                'Header 2.0\nHeader 2.1',
+                                                'Header 3'])
+        basename = self.BASENAME % source
+        expected_file = self.test_data_path('expected', basename)
+        result_file = self.test_data_path('_shared', basename)
+        table.obj_to_file(result_file, break_line=True)
+        self.assert_result_file(expected_file, result_file)
+        self.remove_file(result_file)
 
 
 if __name__ == '__main__':

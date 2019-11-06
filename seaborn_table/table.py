@@ -627,7 +627,7 @@ class SeabornTable(object):
     @classmethod
     def objs_to_mark_down(cls, tables, file_path=None, keys=None,
                           pretty_columns=True, quote_numbers=True,
-                          align='left', pad_last_column=True):
+                          align='left', pad_last_column=True, break_line=False):
         """
         This will return a str of multiple mark down tables.
         :param tables:         dict of {str <name>:SeabornTable}
@@ -638,19 +638,22 @@ class SeabornTable(object):
         :param align:           str of 'left', 'right', 'center', 'none' to
                                 align the text within the cells.
         :param pad_last_column: bool if True will space the last column
+        :param break_line:     bool if True will insert a new row when a cell
+                               has a line break i.e. \n
         :return:               str of the converted markdown tables
         """
         keys = keys or tables.keys()
         ret = ['#### ' + key + '\n' + tables[key].obj_to_mark_down(
             pretty_columns=pretty_columns, quote_numbers=quote_numbers,
-            align=align, pad_last_column=pad_last_column)
+            align=align, pad_last_column=pad_last_column, break_line=break_line)
                for key in keys]
         ret = '\n\n'.join(ret)
         cls._save_file(file_path, ret)
         return ret
 
     def obj_to_md(self, file_path=None, title_columns=False,
-                  quote_numbers=True, align='left', pad_last_column=True):
+                  quote_numbers=True, align='left', pad_last_column=True,
+                  break_line=False):
         """
         This will return a str of a mark down tables.
         :param title_columns: bool if True will title all headers
@@ -659,17 +662,20 @@ class SeabornTable(object):
         :param align:           str of 'left', 'right', 'center', 'none' to
                                 align the text within the cells.
         :param pad_last_column: bool if True will space the last column
+        :param break_line:     bool if True will insert a new row when a cell
+                               has a line break i.e. \n
         :return: str
         """
         return self.obj_to_mark_down(file_path=file_path,
                                      title_columns=title_columns,
                                      quote_numbers=quote_numbers,
                                      align=align,
-                                     pad_last_column=pad_last_column)
+                                     pad_last_column=pad_last_column,
+                                     break_line=break_line)
 
     def obj_to_mark_down(self, file_path=None, title_columns=False,
                          quote_numbers=True, quote_empty_str=False,
-                         align='left', pad_last_column=True):
+                         align='left', pad_last_column=True, break_line=False):
         """
         This will return a str of a mark down table.
         :param title_columns:   bool if True will title all headers
@@ -679,24 +685,33 @@ class SeabornTable(object):
         :param align:           str of 'left', 'right', 'center', 'none' to
                                 align the text within the cells.
         :param pad_last_column: bool if True will space the last column
+        :param break_line:      bool if True will insert a new row when a cell
+                                has a line break i.e. \n
         :return: str
         """
         md, column_widths = self.get_data_and_shared_column_widths(
             data_kwargs=dict(quote_numbers=quote_numbers,
                              quote_empty_str=quote_empty_str,
-                             title_columns=title_columns),
+                             title_columns=title_columns,
+                             break_line=break_line),
             width_kwargs=dict(padding=1, pad_last_column=pad_last_column))
 
-        md.insert(1, [u":" + u'-' * (width - 1) for width in column_widths])
         md = [u'| '.join(row) for row in self._align_cells(
             align, align, column_widths, md)]
+
+        bar = '| '.join([u":" + u'-' * (width - 1) for width in column_widths])
+        if break_line:
+            md.insert(1 + max([str(c).count('\n') for c in self.columns]), bar)
+        else:
+            md.insert(1, bar)
         ret = u'| ' + u' |\n| '.join(md) + u' |'
         self._save_file(file_path, ret)
         return ret
 
     def obj_to_txt(self, file_path=None, deliminator=None, tab=None,
                    quote_numbers=True, quote_empty_str=False,
-                   quote_texts=None, pad_last_column=None, align='left'):
+                   quote_texts=None, pad_last_column=None, align='left',
+                   break_line=False):
         """
         This will return a simple str table.
         :param file_path:       str of the path to the file
@@ -708,9 +723,11 @@ class SeabornTable(object):
         :param pad_last_column: bool if True will space the last column
         :param align:           str of 'left', 'right', 'center', 'none' to
                                 align the text within the cells.
+        :param break_line:      bool if True will insert a new row when a cell
+                                has a line break i.e. \n
         :return:                str of the converted markdown tables
         """
-        if align == 'center' or align == 'right' and pad_last_column==None:
+        if align == 'center' or align == 'right' and pad_last_column == None:
             pad_last_column = True
 
         return self.obj_to_str(file_path=file_path, deliminator=deliminator,
@@ -718,11 +735,12 @@ class SeabornTable(object):
                                quote_empty_str=quote_empty_str,
                                quote_texts=quote_texts,
                                pad_last_column=pad_last_column,
-                               align=align)
+                               align=align, break_line=break_line)
 
     def obj_to_str(self, file_path=None, deliminator=None, tab=None,
                    quote_numbers=True, quote_empty_str=False,
-                   quote_texts=None, pad_last_column=None, align='left'):
+                   quote_texts=None, pad_last_column=None, align='left',
+                   break_line=False):
         """
         This will return a simple str table.
         :param file_path:       str of the path to the file
@@ -734,9 +752,11 @@ class SeabornTable(object):
         :param pad_last_column: bool if True will space the last column
         :param align:           str of 'left', 'right', 'center', 'none' to
                                 align the text within the cells.
+        :param break_line:      bool if True will insert a new row when a cell
+                                has a line break i.e. \n
         :return:                str of the converted markdown tables
         """
-        if align == 'center' or align == 'right' and pad_last_column==None:
+        if align == 'center' or align == 'right' and pad_last_column == None:
             pad_last_column = True
         deliminator = self.deliminator if deliminator is None \
             else deliminator
@@ -746,7 +766,8 @@ class SeabornTable(object):
             data_kwargs=dict(quote_numbers=quote_numbers,
                              quote_empty_str=quote_empty_str,
                              quote_texts=quote_texts,
-                             deliminator=_deliminator),
+                             deliminator=_deliminator,
+                             break_line=break_line),
             width_kwargs=dict(padding=0, pad_last_column=pad_last_column))
 
         ret = self._align_cells(align, align, column_widths, list_of_list)
@@ -757,7 +778,7 @@ class SeabornTable(object):
 
     def obj_to_rst(self, file_path=None, deliminator='  ', tab=None,
                    quote_numbers=True, quote_empty_str=False, align='left',
-                   pad_last_column=True):
+                   pad_last_column=True, break_line=False):
         """
         This will return a str of a rst table.
         :param file_path:       str of the path to the file
@@ -768,25 +789,33 @@ class SeabornTable(object):
         :param align:           str of 'left', 'right', 'center', 'none' to
                                 align the text within the cells.
         :param pad_last_column: bool if True will space the last column
+        :param break_line:      bool if True will insert a new row when a cell
+                                has a line break i.e. \n
         :return:                str of the converted markdown tables
         """
         tab = self.tab if tab is None else tab
         list_of_list, column_widths = self.get_data_and_shared_column_widths(
             data_kwargs=dict(quote_numbers=quote_numbers,
                              quote_empty_str=quote_empty_str,
-                             deliminator=' '),
+                             deliminator=' ',
+                             break_line=break_line),
             width_kwargs=dict(padding=0, pad_last_column=pad_last_column))
         ret = self._align_cells(align, align, column_widths, list_of_list)
         bar = deliminator.join(['=' * width for width in column_widths])
         ret = [deliminator.join(row) for row in ret]
-        ret = [bar, ret[0], bar] + ret[1:] + [bar]
+        ret = [bar, ret[0]] + ret[1:] + [bar]
+        if break_line:
+            ret.insert(2 + max([str(c).count('\n') for c in self.columns]), bar)
+        else:
+            ret.insert(2, bar)
+
         ret = tab + (u'\n' + tab).join(ret)
         self._save_file(file_path, ret)
         return ret
 
     def obj_to_psql(self, file_path=None, deliminator=' | ', tab=None,
                     quote_numbers=True, quote_empty_str=False, align='left',
-                    pad_last_column=None):
+                    pad_last_column=None, break_line=False):
         """
         This will return a str of a psql table.
         :param file_path:       str of the path to the file
@@ -797,27 +826,36 @@ class SeabornTable(object):
         :param align:           str of 'left', 'right', 'center', 'none' to
                                 align the text within the cells.
         :param pad_last_column: bool if True will space the last column
+        :param break_line:      bool if True will insert a new row when a cell
+                                has a line break i.e. \n
         :return:                str of the converted markdown tables
         """
-        if align == 'center' or align == 'right' and pad_last_column==None:
+        if align == 'center' or align == 'right' and pad_last_column == None:
             pad_last_column = True
         tab = self.tab if tab is None else tab
         list_of_list, column_widths = self.get_data_and_shared_column_widths(
             data_kwargs=dict(quote_numbers=quote_numbers,
-                             quote_empty_str=quote_empty_str),
+                             quote_empty_str=quote_empty_str,
+                             break_line=break_line),
             width_kwargs=dict(padding=0, pad_first_cell=1,
                               pad_last_column=pad_last_column))
+        if break_line:
+            header_index = 1 + max([str(c).count('\n') for c in self.columns])
+        else:
+            header_index = 1
+
         for row in list_of_list:
             row[0] = ' ' + row[0]
         if len(column_widths) > 1:
             column_widths[-1] += 1
 
-        ret = self._align_cells(align, 'center', column_widths, list_of_list)
+        ret = self._align_cells(align, 'center', column_widths, list_of_list,
+                                header_index)
         column_widths = self._get_column_widths(ret, padding=3,
                                                 pad_last_column=True)
         ret = [deliminator.join(row) for row in ret]
         bar = ('+'.join(['-' * (width - 1) for width in column_widths]))[1:]
-        ret.insert(1, bar)
+        ret.insert(header_index, bar)
         ret = tab + (u'\n' + tab).join(ret)
         self._save_file(file_path, ret)
         return ret
@@ -850,7 +888,7 @@ class SeabornTable(object):
 
     def obj_to_grid(self, file_path=None, delim=None, tab=None,
                     quote_numbers=True, quote_empty_str=False, align='left',
-                    pad_last_column=True):
+                    pad_last_column=True, break_line=False):
         """
         This will return a str of a grid table.
         :param file_path:       path to data file, defaults to
@@ -863,6 +901,8 @@ class SeabornTable(object):
         :param align:           str of 'left', 'right', 'center', 'none' to
                                 align the text within the cells.
         :param pad_last_column: bool if True will space the last column
+        :param break_line:      bool if True will insert a new row when a cell
+                                has a line break i.e. \n
         :return:                string representing the grid formation
                                 of the relevant data
         """
@@ -883,7 +923,8 @@ class SeabornTable(object):
         tab = self.tab if tab is None else tab
         list_of_list, column_widths = self.get_data_and_shared_column_widths(
             data_kwargs=dict(quote_numbers=quote_numbers,
-                             quote_empty_str=quote_empty_str),
+                             quote_empty_str=quote_empty_str,
+                             break_line=break_line),
             width_kwargs=dict(padding=0, pad_last_column=pad_last_column))
 
         ret = self._align_cells(align, align, column_widths, list_of_list)
@@ -899,17 +940,32 @@ class SeabornTable(object):
 
         ret = [delim['left edge'] + delim['internal vertical edge'].join(row) +
                delim['right edge'] for row in ret]
-        header = [grid_row["top"], ret[0], grid_row["divide"]]
-        body = [[row, grid_row["middle"]] for row in ret[1:]]
-        body = [item for pair in body for item in pair][:-1]
-        ret = header + body + [grid_row["bottom"]]
-        ret = tab + (u'\n' + tab).join(ret)
+
+        if break_line:
+            header_index = 1 + max([str(c).count('\n') for c in self.columns])
+            skips = [max([str(row[col]).count('\n')
+                          for col in self.columns]) for row in self]
+        else:
+            header_index = 1
+            skips = [0]
+
+        body = [grid_row["top"]] + ret[:header_index] + [grid_row["divide"]]
+        skip = skips.pop(0)
+        for row in ret[header_index:]:
+            body.append(row)
+            if skip == 0 and row is not ret[-1]:
+                body.append(grid_row['middle'])
+                skip = skips.pop(0) if skips else 0
+            else:
+                skip -= 1
+        body.append(grid_row['bottom'])
+        ret = tab + (u'\n' + tab).join(body)
         self._save_file(file_path, ret)
         return ret
 
     def obj_to_csv(self, file_path=None, quote_everything=False,
                    align='left', quote_numbers=True,
-                   pad_last_column=None):
+                   pad_last_column=None, **kwargs):
         """
         This will return a str of a csv text that is friendly to excel
         :param file_path:        str to the path
@@ -921,7 +977,7 @@ class SeabornTable(object):
                                  align the text within the cells.
         :return: str
         """
-        if align == 'center' or align == 'right' and pad_last_column==None:
+        if align == 'center' or align == 'right' and pad_last_column == None:
             pad_last_column = True
         list_of_list, column_widths = self.get_data_and_shared_column_widths(
             data_kwargs=dict(quote_numbers=quote_numbers,
@@ -1012,35 +1068,39 @@ class SeabornTable(object):
             if not record in self.shared_tables and table is not self:
                 self.shared_tables.append(record)
 
-    def _align_cells(self, align, align_header, column_widths, list_of_list):
+    def _align_cells(self, align, align_header, column_widths, list_of_list,
+                     header_index=1):
         if align_header == 'left':
-            header = [cell.ljust(column_widths[i])
-                      for i, cell in enumerate(list_of_list[0])]
+            header = [[cell.ljust(column_widths[i])
+                       for i, cell in enumerate(row)]
+                      for row in list_of_list[:header_index]]
         elif align_header == 'right':
-            header = [cell.rjust(column_widths[i])
-                      for i, cell in enumerate(list_of_list[0])]
+            header = [[cell.rjust(column_widths[i])
+                       for i, cell in enumerate(row)]
+                      for row in list_of_list[:header_index]]
         elif align_header == 'center':
-            header = [cell.center(column_widths[i])
-                      for i, cell in enumerate(list_of_list[0])]
+            header = [[cell.center(column_widths[i])
+                       for i, cell in enumerate(row)]
+                      for row in list_of_list[:header_index]]
         elif align_header == 'none':
-            header = list_of_list[0]
+            header = list_of_list[:header_index]
         else:
             raise Exception("Unknown header align: %s", align)
 
         if align == 'left':
             body = [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
-                    for row in list_of_list[1:]]
+                    for row in list_of_list[header_index:]]
         elif align == 'right':
             body = [[cell.rjust(column_widths[i]) for i, cell in enumerate(row)]
-                    for row in list_of_list[1:]]
+                    for row in list_of_list[header_index:]]
         elif align == 'center':
             body = [[cell.center(column_widths[i]) for i, cell in enumerate(row)
-                     ] for row in list_of_list[1:]]
+                     ] for row in list_of_list[header_index:]]
         elif align == 'none':
-            body = list_of_list[:1]
+            body = list_of_list[header_index:]
         else:
             raise Exception("Unknown body align: %s", align)
-        return [header] + body
+        return header + body
 
     @property
     def tab(self):
@@ -1677,10 +1737,13 @@ class SeabornTable(object):
         """
         data_kwargs = data_kwargs.copy()
         safe_str = data_kwargs.pop('safe_str', self._safe_str)
+        break_line = data_kwargs.pop('break_line', False)
         list_of_list = [[safe_str(col, _is_header=True, **data_kwargs)
                          for col in self.columns]]
         list_of_list += [[safe_str(row[col], **data_kwargs)
                           for col in self.columns] for row in self]
+        if break_line:
+            self._break_line_into_multiple_rows(list_of_list)
         column_widths = self._get_column_widths(list_of_list, **width_kwargs)
         return list_of_list, column_widths
 
@@ -1701,6 +1764,20 @@ class SeabornTable(object):
                 if delta > 0 and (not shared_limit or delta <= shared_limit):
                     column_widths[i] = width
         return list_of_list, column_widths
+
+    def _break_line_into_multiple_rows(self, list_of_list):
+        # This is destructive of list_of_list for the sake of speed
+        for row in range(len(list_of_list) - 1, -1, -1):
+            count = max([cell.count('\n') for cell in list_of_list[row]])
+            if count:
+                for i in range(row + 1, count + row + 1):
+                    list_of_list.insert(i, [''] * len(self.columns))
+                for j, cell in enumerate(list_of_list[row]):
+                    for r, line in enumerate(cell.split('\n')):
+                        if '"' in cell:
+                            list_of_list[row + r][j] = line
+                        else:
+                            list_of_list[row + r][j] = line.strip()
 
     @classmethod
     def _safe_str(cls, cell, quote_numbers=True, repr_line_break=False,
