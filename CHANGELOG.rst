@@ -1,3 +1,12 @@
+Changes in 6.1.0
+================
+
+* Added ``break_line`` argument to obj_to_md, obj_to_str, obj_to_rst,
+  obj_to_psql, obj_to_grid methods which will insert a new row
+  whenever a cell has a line break in it.  A table created with break_line,
+  is not reverseable, which means the table cannot be read back in.
+
+
 Changes in 6.0.1
 ================
 
