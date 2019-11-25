@@ -19,6 +19,7 @@
 import json
 import os
 import sys
+from argparse import ArgumentParser
 from collections import OrderedDict
 from functools import reduce
 
@@ -2107,14 +2108,20 @@ BASESTRING = basestring if sys.version_info[0] == 2 else str
 UNICODE = unicode if sys.version_info[0] == 2 else str
 
 
-def main(source=None, destination=None):
-    if source is None and len(sys.argv) != 3:
-        print(globals()['__doc__'])
-        return
-    source = sys.argv[1] if source is None else source
-    destination = sys.argv[2] if destination is None else destination
-    table = SeabornTable.file_to_obj(source)
-    table.obj_to_file(destination)
+def main(cli_args=sys.argv[1:]):
+    parser = ArgumentParser(
+        description='The seaborn_table library used as a script will convert'
+                    ' one file type (%s) to another file type.'%', '.join(
+            SeabornTable.KNOWN_FORMATS))
+    parser.add_argument('source', help='source file to be converted')
+    parser.add_argument('destination', help='destination file to be created')
+    parser.add_argument('--columns', nargs='+', default=None,
+                        help='If specified will change the column header.')
+    args = parser.parse_args(cli_args)
+    table = SeabornTable.file_to_obj(args.source)
+    if args.columns:
+        table.columns=args.columns
+    table.obj_to_file(args.destination)
 
 
 if __name__ == '__main__':

@@ -1,3 +1,10 @@
+Changes in 6.2.0
+================
+
+* Replaced manual parsing args with ArgumentParser and added a ``--column``
+  option.
+
+
 Changes in 6.1.0
 ================
 
