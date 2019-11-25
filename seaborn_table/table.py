@@ -1689,20 +1689,26 @@ class SeabornTable(object):
         index = self._column_index[item]
         return [row[index] for row in self.table]
 
-    def sort_by_key(self, keys=None, string_comparison=False):
+    def sort_by_key(self, keys=None, string_comparison=None):
         """
         :param keys: list of str to sort by, if name starts with - reverse order
-        :param string_comparison: bool if True compares a str(value)
+        :param string_comparison: bool if True compares a str(value) if None
+                                  it will compare without str and if fails
+                                  it will compare string values
         :return: None
         """
         keys = keys or self.key_on
         keys = keys if isinstance(keys, (list, tuple)) else [keys]
         for key in reversed(keys):
             reverse, key = (True, key[1:]) if key[0] == '-' else (False, key)
-            if string_comparison:
-                self.table.sort(key=lambda row: str(row[key]), reverse=reverse)
-            else:
-                self.table.sort(key=lambda row: row[key], reverse=reverse)
+            if not string_comparison:
+                try:
+                    self.table.sort(key=lambda row: row[key], reverse=reverse)
+                    continue
+                except TypeError as ex:
+                    if string_comparison is False:
+                        raise ex
+            self.table.sort(key=lambda row: str(row[key]), reverse=reverse)
 
     def reverse(self):
         self.table.reverse()
@@ -2117,10 +2123,16 @@ def main(cli_args=sys.argv[1:]):
     parser.add_argument('destination', help='destination file to be created')
     parser.add_argument('--columns', nargs='+', default=None,
                         help='If specified will change the column header.')
+    parser.add_argument('--order-by', nargs='+', default=None,
+                        help='If specified will reorder the rows with ``~``'
+                             ' reversing the order.')
+
     args = parser.parse_args(cli_args)
     table = SeabornTable.file_to_obj(args.source)
     if args.columns:
         table.columns=args.columns
+    if args.order_by:
+        table.sort_by_key(keys=[a.replace('~', '-') for a in args.order_by])
     table.obj_to_file(args.destination)
 
 
