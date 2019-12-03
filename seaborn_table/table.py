@@ -19,6 +19,7 @@
 import json
 import os
 import sys
+from argparse import ArgumentParser
 from collections import OrderedDict
 from functools import reduce
 
@@ -1688,20 +1689,26 @@ class SeabornTable(object):
         index = self._column_index[item]
         return [row[index] for row in self.table]
 
-    def sort_by_key(self, keys=None, string_comparison=False):
+    def sort_by_key(self, keys=None, string_comparison=None):
         """
         :param keys: list of str to sort by, if name starts with - reverse order
-        :param string_comparison: bool if True compares a str(value)
+        :param string_comparison: bool if True compares a str(value) if None
+                                  it will compare without str and if fails
+                                  it will compare string values
         :return: None
         """
         keys = keys or self.key_on
         keys = keys if isinstance(keys, (list, tuple)) else [keys]
         for key in reversed(keys):
             reverse, key = (True, key[1:]) if key[0] == '-' else (False, key)
-            if string_comparison:
-                self.table.sort(key=lambda row: str(row[key]), reverse=reverse)
-            else:
-                self.table.sort(key=lambda row: row[key], reverse=reverse)
+            if not string_comparison:
+                try:
+                    self.table.sort(key=lambda row: row[key], reverse=reverse)
+                    continue
+                except TypeError as ex:
+                    if string_comparison is False:
+                        raise ex
+            self.table.sort(key=lambda row: str(row[key]), reverse=reverse)
 
     def reverse(self):
         self.table.reverse()
@@ -2107,14 +2114,26 @@ BASESTRING = basestring if sys.version_info[0] == 2 else str
 UNICODE = unicode if sys.version_info[0] == 2 else str
 
 
-def main(source=None, destination=None):
-    if source is None and len(sys.argv) != 3:
-        print(globals()['__doc__'])
-        return
-    source = sys.argv[1] if source is None else source
-    destination = sys.argv[2] if destination is None else destination
-    table = SeabornTable.file_to_obj(source)
-    table.obj_to_file(destination)
+def main(cli_args=sys.argv[1:]):
+    parser = ArgumentParser(
+        description='The seaborn_table library used as a script will convert'
+                    ' one file type (%s) to another file type.'%', '.join(
+            SeabornTable.KNOWN_FORMATS))
+    parser.add_argument('source', help='source file to be converted')
+    parser.add_argument('destination', help='destination file to be created')
+    parser.add_argument('--columns', nargs='+', default=None,
+                        help='If specified will change the column header.')
+    parser.add_argument('--order-by', nargs='+', default=None,
+                        help='If specified will reorder the rows with ``~``'
+                             ' reversing the order.')
+
+    args = parser.parse_args(cli_args)
+    table = SeabornTable.file_to_obj(args.source)
+    if args.columns:
+        table.columns=args.columns
+    if args.order_by:
+        table.sort_by_key(keys=[a.replace('~', '-') for a in args.order_by])
+    table.obj_to_file(args.destination)
 
 
 if __name__ == '__main__':

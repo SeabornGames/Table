@@ -1,0 +1,19 @@
+ TU  | Player | Action
+-----+--------+------------------------
+ 1   | Ann    | None
+ 1   | Ben    | "True"
+ 1   | Cal    | True
+ 1   | Dan    | "False"
+ 1   | Ed     | False
+ 1   | Fin    | Class
+ 2   | Ed     | Class
+ 2   | Cal    | Class
+ 2   | Dan    | Class
+ 2   | Ann    | Class
+ 2   | Fin    | "3"
+ 2   | Ben    | ฉันต้องคิดถึงเธอแบบไหน
+ +NA | Cal    | Claim
+ 3   | Dan    | =+NA
+ 4   | Ben    | Class
+ 4   | Fin    | Class
+ 4   | Cal    | Class
