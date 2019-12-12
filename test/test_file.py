@@ -87,5 +87,20 @@ class ParseArgsTest(BaseTest):
                                      '--order-by', '~Player', 'Target')
 
 
+class MergeTest(BaseTest):
+    def test_merge_tables(self):
+        source_file = self.test_data_path('test_file.csv')
+        expected_file = self.test_data_path('expected', 'merge_file.md')
+        result_file = self.test_data_path('_merge_files', 'merge_file.md')
+        merge_file1 = self.test_data_path('merge_file1.psql')
+        merge_file2 = self.test_data_path('merge_file2.rst')
+        cli_converter([source_file, result_file, '--merge-file',
+                       merge_file1, merge_file2])
+        self.assert_result_file(expected_file, result_file,
+                                'Failure merging %s with %s and %s in %s'%(
+                                source_file, merge_file1, merge_file2,
+                                result_file))
+
+
 if __name__ == '__main__':
     unittest.main()

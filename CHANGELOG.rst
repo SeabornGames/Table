@@ -1,3 +1,12 @@
+Changes in 6.3.0
+================
+
+* Added merge_table method to merge a second table with the original table based
+  on common columns.
+
+* Added ``--merge-file`` command line argument to merge two files.
+
+
 Changes in 6.2.0
 ================
 

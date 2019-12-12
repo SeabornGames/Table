@@ -142,11 +142,12 @@ class SeabornTable(object):
         :param columns:      list of str of the columns in the table
         :param row_columns:  list of str if different then visible columns
         :param tab:          str to include before every row
-        :param key_on:       str, tuple, or list if assigned the table can be
-                             treated as a dictionary.  This is slow but dynamic.
-        :param column_key:   str if assigned the table can be treated as a
-                             dictionary.  This is slow but static, it can be
-                             updated with update_column_key_values.
+        :param key_on:       str, tuple, or list if assigned the table can use
+                             the get method as a dictionary.  This is slow but
+                             dynamic.
+        :param column_key:   str if assigned the table can use the get method
+                             as a dictionary.  This is fast but static, it can
+                             be updated with update_column_key_values.
         :param deliminator:  str to separate the columns such as , \t or |
         :param validate:     bool if True will validate the row, columns and
                              headers for proper indexing
@@ -1159,6 +1160,8 @@ class SeabornTable(object):
         :param value: str of which column to key the rows on like a dictionary
         :return: None
         """
+        if value is None:
+            return
         if isinstance(value, BASESTRING):
             value = (value,)
         self._key_on = value
@@ -1185,6 +1188,39 @@ class SeabornTable(object):
         index = self._column_index[self.column_key]
         for row in self:
             self._column_key_dict[row[index]] = row
+
+    def merge_tables(self, other_table, common_columns=None, new_columns=None):
+        """
+            This will add data of new_columns from the table to this table based
+            on shared values in the common_columns.  Rows in the other_table
+            not matched to rows in self will not be represented.
+        :param other_table:    SeabornTable to merge with this table
+        :param common_columns: list of str of columns to base the merge on.
+                               Defaults to shared columns.
+        :param new_columns:    list of str of columns to add to self.  Note,
+                               if the columns already exist this will override
+                               the existing data in those columns.  Defaults to
+                               unique columns.
+        :return:
+        """
+        if common_columns is None:
+            common_columns = [c for c in other_table.row_columns
+                              if c in self.row_columns]
+        if new_columns is None:
+            new_columns = [c for c in other_table.columns
+                           if c not in self.columns]
+        for c in new_columns:
+            if c not in self.row_columns:
+                self.insert(None, c)
+        original_key_on = other_table.key_on
+        other_table.key_on = common_columns
+        for row in self:
+            key = [row[c] for c in common_columns]
+            _row = other_table.get(key, None)
+            if _row is not None:
+                for c in new_columns:
+                    row[c] = _row[c]
+        other_table.key_on = original_key_on
 
     @property
     def parameters(self):
@@ -1648,7 +1684,7 @@ class SeabornTable(object):
         for i, row in enumerate(self.table):
             row[index] = value[i]
 
-    def insert(self, index, column, default_value='', values=None,
+    def insert(self, index, column, default_value=None, values=None,
                compute_value_func=None, compute_key=None):
         """
             This will insert a new column at index and then set the value
@@ -2126,13 +2162,23 @@ def main(cli_args=sys.argv[1:]):
     parser.add_argument('--order-by', nargs='+', default=None,
                         help='If specified will reorder the rows with ``~``'
                              ' reversing the order.')
-
+    parser.add_argument('--merge-file', nargs='+', default=None,
+                        help='If specified will merge the file with the source'
+                             ' file based on common columns.  Rows in the '
+                             ' merge file that are not matched to a source'
+                             ' file will not be shown in the file.')
     args = parser.parse_args(cli_args)
     table = SeabornTable.file_to_obj(args.source)
+
+    for file in (args.merge_file or []):
+        merge_table = SeabornTable.file_to_obj(file)
+        table.merge_tables(merge_table)
+
     if args.columns:
         table.columns=args.columns
     if args.order_by:
         table.sort_by_key(keys=[a.replace('~', '-') for a in args.order_by])
+
     table.obj_to_file(args.destination)
 
 

@@ -228,5 +228,6 @@ class ExampleTableTest(BaseTest):
         self.assertEqual(list(table.keys()), table.get_column(table.columns[0]))
 
 
+
 if __name__ == '__main__':
     unittest.main()

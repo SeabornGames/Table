@@ -1,0 +1,7 @@
+ TU  | Player1 |    Role1    |        Action1         | Target1
+-----+---------+-------------+------------------------+-----------
+ 1   | Ann     | Executioner | None                   | None
+ 2   | Ed      | Inspector   | Class                  | Dan
+ +NA | Cal     | Reporter    | Claim                  | Inspector
+ 3   | Dan     | Trader      | =+NA                   | Ben, Cal
+ 4   | Ben     | Inspector   | Class                  | Dan
