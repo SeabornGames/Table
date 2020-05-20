@@ -1319,9 +1319,6 @@ class SeabornTable(object):
             handler['max_widths'] = {c: int(max_widths) for c in self.columns
                                      if min_widths is None or c in min_widths}
 
-        if sorted(min_widths.keys()) != sorted(max_widths.keys()):
-            raise SyntaxError('min_widths keys must equal max_widths keys')
-
         if isinstance(clip_widths, (int, float)):
             handler['clip_widths'] = {c: int(clip_widths) for c in self.columns}
 
