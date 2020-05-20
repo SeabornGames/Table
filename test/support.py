@@ -18,11 +18,17 @@ class BaseTest(unittest.TestCase):
     maxDiff = None
 
     def assert_result_file(self, expected_file, result_file, message=None):
-        with open(expected_file, 'rb') as fp:
-            expected = fp.read().decode('utf-8').replace('\r', '').split('\n')
-
+        if message is None:
+            message = 'for expected file: %s'%os.path.basename(expected_file)
         with open(result_file, 'rb') as fp:
             result = fp.read().decode('utf-8').replace('\r', '').split('\n')
+
+        # uncomment to create expected files
+        # with open(expected_file, 'w') as fp:
+        #     fp.write('\n'.join(result))
+
+        with open(expected_file, 'rb') as fp:
+            expected = fp.read().decode('utf-8').replace('\r', '').split('\n')
 
         for i in range(len(result)):
             self.assertEqual(expected[i], result[i], message)

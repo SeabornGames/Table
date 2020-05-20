@@ -106,7 +106,7 @@ class SharedColumnLimitTest(SharedColumnTest):
     BASENAME = 'test_share_columns_10.%s'
 
 
-class SharedColumnLimitTest(SharedColumnTest):
+class SharedColumnLimitTestNone(SharedColumnTest):
     SHARED_LIMIT = None
     BASENAME = 'test_share_columns_0.%s'
 
@@ -139,6 +139,49 @@ class LineBreakTest(BaseTest, FormatMixin):
         table.obj_to_file(result_file, break_line=True)
         self.assert_result_file(expected_file, result_file)
         self.remove_file(result_file)
+        table.close_live_table()
+
+
+class LiveTableTest(BaseTest, FormatMixin):
+    BASENAME = 'test_live_table'
+
+    def validate_test_condition(self, source):
+        data = [
+            [1, '', 3, 'hidden'],
+            [None, '2.1', 3.1, 'h'],
+            [1.12, 'very long cell', 3.12, 'h2'],
+            [1, 'very long cell to be clipped', 3, '']
+        ]
+        result_file = self.test_data_path('_live_table',
+                                          self.BASENAME+'.'+source)
+        expected_file = self.test_data_path('expected',
+                                            self.BASENAME+'_%s.'+source)
+        table = SeabornTable(
+            data[:1],
+            columns=['A', 'B', 'C'],
+            row_columns=['A', 'B', 'C', 'Hidden'],
+            live_tables=[
+                dict(file_path=result_file, min_widths=2, max_widths=10,
+                     clip_widths=14, recreate=True),
+            ]
+        )
+        self.assert_result_file(expected_file%0, result_file)
+        table.append(data[1])
+        self.assert_result_file(expected_file%1, result_file)
+        for index, row in enumerate(data[2:], start=2):
+            table.append({col: row[i]
+                          for i, col in enumerate(table.row_columns)})
+            self.assert_result_file(expected_file%index, result_file)
+
+        table.close_live_table()
+        self.assert_result_file(expected_file % (index+1), result_file)
+        self.remove_file(result_file)
+
+    def test_html(self):
+        unittest.skip("Not Applicable")
+
+    def test_json(self):
+        unittest.skip("Not Applicable")
 
 
 if __name__ == '__main__':
