@@ -1296,6 +1296,7 @@ class SeabornTable(object):
             raise NotImplemented("setup live table doesn't handle this yet")
 
         handler = locals()
+        handler.pop('self')
         if type is None and file_path:
             for file_type in self.KNOWN_FORMATS:
                 if file_path.endswith('.%s' % file_type):
@@ -1305,12 +1306,25 @@ class SeabornTable(object):
             raise SyntaxError("File type: %s is not a known file type", type)
 
         if isinstance(min_widths, (int, float)):
-            handler['min_widths'] = {c: len(c) + int(min_widths)
-                                     for c in self.columns}
+            if isinstance(max_widths, dict):
+                handler['min_widths'] = {c: len(c) + int(min_widths)
+                                         for c in self.columns
+                                         if c in max_widths}
+            else:
+                handler['min_widths'] = {c: len(c) + int(min_widths)
+                                         for c in self.columns}
+            min_widths = handler['min_widths']
+
         if isinstance(max_widths, (int, float)):
-            handler['max_widths'] = {c: int(max_widths) for c in self.columns}
+            handler['max_widths'] = {c: int(max_widths) for c in self.columns
+                                     if min_widths is None or c in min_widths}
+
+        if sorted(min_widths.keys()) != sorted(max_widths.keys()):
+            raise SyntaxError('min_widths keys must equal max_widths keys')
+
         if isinstance(clip_widths, (int, float)):
             handler['clip_widths'] = {c: int(clip_widths) for c in self.columns}
+
         handler['widths'] = handler['min_widths']
         handler['method'] = getattr(self, 'obj_to_%s' % handler['type'])
 
@@ -1379,7 +1393,8 @@ class SeabornTable(object):
             bottom_bar = delim[draw[0]]
             bottom_bar += delim[draw[1]].join(
                 [delim[draw[2]] * handler['widths'][col]
-                 for col in self.columns])
+                 for col in self.columns
+                 if col in handler['widths']])
             bottom_bar += delim[draw[3]]
             tab = handler['kwargs'].get('tab', '')
             handler['stream'](tab + bottom_bar)
@@ -1388,7 +1403,8 @@ class SeabornTable(object):
             deliminator = handler['kwargs'].get('deliminator', '  ')
             tab = handler['kwargs'].get('tab', '')
             bottom_bar = deliminator.join(['=' * handler['widths'][col]
-                                           for col in self.columns])
+                                           for col in self.columns
+                                           if col in handler['widths']])
             handler['stream'](tab + bottom_bar)
 
         if 'fn' in handler:
@@ -2010,17 +2026,11 @@ class SeabornTable(object):
         if not isinstance(widths, dict):
             dw = widths if isinstance(widths, (int, float)) else self.MIN_WIDTHS
             widths = {col: dw for col in self.columns}
-        elif len(self.columns) != len(widths):
-            for col in self.columns:
-                widths.setdefault(col, self.MIN_WIDTHS)
 
         if not isinstance(max_widths, dict):
             dw = widths if isinstance(max_widths, (int, float)) \
                 else self.MAX_WIDTHS
             max_widths = {col: dw for col in self.columns}
-        elif len(self.columns) != len(max_widths):
-            for col in self.columns:
-                max_widths.setdefault(col, self.MAX_WIDTHS)
 
         def _len(text):
             if len(text) > 15:
@@ -2033,10 +2043,15 @@ class SeabornTable(object):
             return len(text)
 
         list_widths = []
-        for i, col in enumerate(self.columns):
+        columns = [c for c in self.columns if c in widths]
+        if not list_of_list:
+            return [widths[col] for col in columns]
+
+        for i, cell in enumerate(list_of_list[0]):
+            col = columns[i]
             real_width = max([_len(row[i]) + padding for row in list_of_list])
-            if widths[col] < real_width <= max_widths[col]:
-                widths[col] = real_width
+            if widths[col] < real_width:
+                widths[col] = min(real_width, max_widths.get(col, real_width))
             list_widths.append(widths[col])
 
         if not pad_last_column and widths:
@@ -2058,17 +2073,25 @@ class SeabornTable(object):
         clip_widths = data_kwargs.pop('clip_widths', None) or {}
         if isinstance(clip_widths, (float, int)):
             clip_widths = {col: int(clip_widths) for col in self.columns}
+
+        if 'widths' in width_kwargs:
+            columns = [c for c in self.columns if c in width_kwargs['widths']]
+        elif 'max_widths' in width_kwargs:
+            columns = [c for c in self.columns
+                       if c in width_kwargs['max_widths']]
+        else:
+            columns = self.columns
         rows = self if _slice is None else self.table[_slice]
         list_of_list = []
         if _slice is None or _slice.start is None:
             list_of_list += [[safe_str(col, _is_header=True,
                                        clip_width=clip_widths.get(col),
                                        **data_kwargs)
-                              for col in self.columns]]
+                              for col in columns]]
         list_of_list += [[safe_str(row[col],
                                    clip_width=clip_widths.get(col),
                                    **data_kwargs)
-                          for col in self.columns] for row in rows]
+                          for col in columns] for row in rows]
         if break_line:
             self._break_line_into_multiple_rows(list_of_list)
         column_widths = self._get_column_widths(list_of_list, **width_kwargs)

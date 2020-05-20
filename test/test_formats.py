@@ -158,10 +158,10 @@ class LiveTableTest(BaseTest, FormatMixin):
                                             self.BASENAME+'_%s.'+source)
         table = SeabornTable(
             data[:1],
-            columns=['A', 'B', 'C'],
             row_columns=['A', 'B', 'C', 'Hidden'],
             live_tables=[
-                dict(file_path=result_file, min_widths=2, max_widths=10,
+                dict(file_path=result_file, min_widths=2,
+                     max_widths={'A': 10, 'B': 10, 'C': 10},
                      clip_widths=14, recreate=True),
             ]
         )
