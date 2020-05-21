@@ -105,6 +105,8 @@ class SeabornRow(list):
 
 class SeabornTable(object):
     SeabornRow = SeabornRow
+    MIN_WIDTHS = 2
+    MAX_WIDTHS = 300
     KNOWN_FORMATS = ['md', 'txt', 'psql', 'rst', 'html', 'grid', 'json', 'csv']
     DEFAULT_DELIMINATOR = u'\t'
     DEFAULT_TAB = u''
@@ -136,7 +138,7 @@ class SeabornTable(object):
 
     def __init__(self, table=None, columns=None, row_columns=None, tab=None,
                  key_on=None, column_key=None, deliminator=None,
-                 validate=True):
+                 validate=True, live_tables=None):
         """
         :param table:        obj can be list of list or list of dict
         :param columns:      list of str of the columns in the table
@@ -150,6 +152,8 @@ class SeabornTable(object):
         :param deliminator:  str to separate the columns such as , \t or |
         :param validate:     bool if True will validate the row, columns and
                              headers for proper indexing
+        :param live_tables:  list of dict to setup each live table handler, see
+                             setup_live_table.
         """
         self._deliminator = self.DEFAULT_DELIMINATOR
         self._tab = self.DEFAULT_TAB
@@ -210,6 +214,9 @@ class SeabornTable(object):
         self.column_key = column_key
         if validate:
             self.assert_valid()
+        self.live_table_handlers = []
+        for live_table in (live_tables or []):
+            self.setup_live_table(**live_table)
 
     @classmethod
     def list_to_obj(cls, list_, columns=None, row_columns=None, key_on=None,
@@ -423,7 +430,7 @@ class SeabornTable(object):
             if file_path.endswith('.%s' % file_type):
                 type_to_obj = getattr(cls, '%s_to_obj' % file_type)
                 return type_to_obj(file_path=file_path, **kwargs)
-        raise Exception('Unknown file type in : %s' % file_path)
+        raise SyntaxError('Unknown file type in : %s' % file_path)
 
     @classmethod
     def txt_to_obj(cls, file_path=None, text='', remove_empty_rows=True,
@@ -636,8 +643,8 @@ class SeabornTable(object):
         :param keys:           list of str of the order of keys to use
         :param pretty_columns: bool if True will make the columns pretty
         :param quote_numbers:  bool if True will quote numbers that are strings
-        :param align:           str of 'left', 'right', 'center', 'none' to
-                                align the text within the cells.
+        :param align:          str of 'left', 'right', 'center', 'none' to
+                               align the text within the cells.
         :param pad_last_column: bool if True will space the last column
         :param break_line:     bool if True will insert a new row when a cell
                                has a line break i.e. \n
@@ -654,17 +661,29 @@ class SeabornTable(object):
 
     def obj_to_md(self, file_path=None, title_columns=False,
                   quote_numbers=True, align='left', pad_last_column=True,
-                  break_line=False):
+                  break_line=False, widths=None, max_widths=None,
+                  clip_widths=None, _slice=None):
         """
         This will return a str of a mark down tables.
-        :param title_columns: bool if True will title all headers
-        :param file_path: str of the path to the file to write to
-        :param quote_numbers:  bool if True will quote numbers that are strings
+        :param title_columns:   bool if True will title all headers
+        :param file_path:       str of the path to the file to write to
+        :param quote_numbers:   bool if True will quote numbers that are strings
         :param align:           str of 'left', 'right', 'center', 'none' to
                                 align the text within the cells.
         :param pad_last_column: bool if True will space the last column
-        :param break_line:     bool if True will insert a new row when a cell
-                               has a line break i.e. \n
+        :param break_line:      bool if True will insert a new row when a cell
+                                has a line break i.e. \n
+        :param widths:          dict of minimal widths for each column
+        :param max_widths:      dict of maximum widths for each column, if
+                                specified then widths argument may be modified
+        :param clip_widths:     dict containing the widths of the cells in
+                                column, and the cell text will be reduced to
+                                this width if necessary, which causes the loss
+                                of data.  If this value is an int it will
+                                be converted to a dict of every column. If this
+                                value is None, then no clipping will happen.
+        :param _slice:          _slice if specified will not return the header,
+                                unless the start is None.
         :return: str
         """
         return self.obj_to_mark_down(file_path=file_path,
@@ -672,11 +691,17 @@ class SeabornTable(object):
                                      quote_numbers=quote_numbers,
                                      align=align,
                                      pad_last_column=pad_last_column,
-                                     break_line=break_line)
+                                     break_line=break_line,
+                                     widths=widths,
+                                     max_widths=max_widths,
+                                     clip_widths=clip_widths,
+                                     _slice=_slice)
 
     def obj_to_mark_down(self, file_path=None, title_columns=False,
                          quote_numbers=True, quote_empty_str=False,
-                         align='left', pad_last_column=True, break_line=False):
+                         align='left', pad_last_column=True, break_line=False,
+                         widths=None, max_widths=None,
+                         clip_widths=None, _slice=None):
         """
         This will return a str of a mark down table.
         :param title_columns:   bool if True will title all headers
@@ -688,22 +713,37 @@ class SeabornTable(object):
         :param pad_last_column: bool if True will space the last column
         :param break_line:      bool if True will insert a new row when a cell
                                 has a line break i.e. \n
+        :param widths:          dict of minimal widths for each column
+        :param max_widths:      dict of maximum widths for each column, if
+                                specified then widths argument may be modified
+        :param clip_widths:     dict containing the widths of the cells in
+                                column, and the cell text will be reduced to
+                                this width if necessary, which causes the loss
+                                of data.  If this value is an int it will
+                                be converted to a dict of every column. If this
+                                value is None, then no clipping will happen.
+        :param _slice:          _slice if specified will not return the header,
+                                unless the start is None
         :return: str
         """
         md, column_widths = self.get_data_and_shared_column_widths(
             data_kwargs=dict(quote_numbers=quote_numbers,
                              quote_empty_str=quote_empty_str,
                              title_columns=title_columns,
-                             break_line=break_line),
-            width_kwargs=dict(padding=1, pad_last_column=pad_last_column))
+                             break_line=break_line,
+                             clip_widths=clip_widths,
+                             _slice=_slice),
+            width_kwargs=dict(padding=1, pad_last_column=pad_last_column,
+                              widths=widths,
+                              max_widths=max_widths))
 
         md = [u'| '.join(row) for row in self._align_cells(
             align, align, column_widths, md)]
 
         bar = '| '.join([u":" + u'-' * (width - 1) for width in column_widths])
-        if break_line:
+        if break_line and (_slice is None or _slice.start is None):
             md.insert(1 + max([str(c).count('\n') for c in self.columns]), bar)
-        else:
+        elif _slice is None or _slice.start is None:
             md.insert(1, bar)
         ret = u'| ' + u' |\n| '.join(md) + u' |'
         self._save_file(file_path, ret)
@@ -712,7 +752,8 @@ class SeabornTable(object):
     def obj_to_txt(self, file_path=None, deliminator=None, tab=None,
                    quote_numbers=True, quote_empty_str=False,
                    quote_texts=None, pad_last_column=None, align='left',
-                   break_line=False):
+                   break_line=False, widths=None, max_widths=None,
+                   clip_widths=None, _slice=None):
         """
         This will return a simple str table.
         :param file_path:       str of the path to the file
@@ -726,9 +767,20 @@ class SeabornTable(object):
                                 align the text within the cells.
         :param break_line:      bool if True will insert a new row when a cell
                                 has a line break i.e. \n
+        :param widths:          dict of minimal widths for each column
+        :param max_widths:      dict of maximum widths for each column, if
+                                specified then widths argument may be modified
+        :param clip_widths:     dict containing the widths of the cells in
+                                column, and the cell text will be reduced to
+                                this width if necessary, which causes the loss
+                                of data.  If this value is an int it will
+                                be converted to a dict of every column. If this
+                                value is None, then no clipping will happen.
+        :param _slice:          _slice if specified will not return the header,
+                                and will only return the rows in the _slice.
         :return:                str of the converted markdown tables
         """
-        if align == 'center' or align == 'right' and pad_last_column == None:
+        if align == 'center' or align == 'right' and pad_last_column is None:
             pad_last_column = True
 
         return self.obj_to_str(file_path=file_path, deliminator=deliminator,
@@ -736,12 +788,15 @@ class SeabornTable(object):
                                quote_empty_str=quote_empty_str,
                                quote_texts=quote_texts,
                                pad_last_column=pad_last_column,
-                               align=align, break_line=break_line)
+                               align=align, break_line=break_line,
+                               widths=widths, max_widths=max_widths,
+                               clip_widths=clip_widths, _slice=_slice)
 
     def obj_to_str(self, file_path=None, deliminator=None, tab=None,
                    quote_numbers=True, quote_empty_str=False,
                    quote_texts=None, pad_last_column=None, align='left',
-                   break_line=False):
+                   break_line=False, widths=None, max_widths=None,
+                   clip_widths=None, _slice=None):
         """
         This will return a simple str table.
         :param file_path:       str of the path to the file
@@ -755,9 +810,20 @@ class SeabornTable(object):
                                 align the text within the cells.
         :param break_line:      bool if True will insert a new row when a cell
                                 has a line break i.e. \n
+        :param widths:          dict of minimal widths for each column
+        :param max_widths:      dict of maximum widths for each column, if
+                                specified then widths argument may be modified
+        :param clip_widths:     dict containing the widths of the cells in
+                                column, and the cell text will be reduced to
+                                this width if necessary, which causes the loss
+                                of data.  If this value is an int it will
+                                be converted to a dict of every column. If this
+                                value is None, then no clipping will happen.
+        :param _slice:          _slice if specified will not return the header,
+                                and will only return the rows in the _slice.
         :return:                str of the converted markdown tables
         """
-        if align == 'center' or align == 'right' and pad_last_column == None:
+        if align == 'center' or align == 'right' and pad_last_column is None:
             pad_last_column = True
         deliminator = self.deliminator if deliminator is None \
             else deliminator
@@ -768,8 +834,12 @@ class SeabornTable(object):
                              quote_empty_str=quote_empty_str,
                              quote_texts=quote_texts,
                              deliminator=_deliminator,
-                             break_line=break_line),
-            width_kwargs=dict(padding=0, pad_last_column=pad_last_column))
+                             break_line=break_line,
+                             _slice=_slice),
+            width_kwargs=dict(padding=0,
+                              pad_last_column=pad_last_column,
+                              widths=widths,
+                              max_widths=max_widths))
 
         ret = self._align_cells(align, align, column_widths, list_of_list)
         ret = [deliminator.join(row) for row in ret]
@@ -779,7 +849,8 @@ class SeabornTable(object):
 
     def obj_to_rst(self, file_path=None, deliminator='  ', tab=None,
                    quote_numbers=True, quote_empty_str=False, align='left',
-                   pad_last_column=True, break_line=False):
+                   pad_last_column=True, break_line=False, widths=None,
+                   max_widths=None, clip_widths=None, _slice=None):
         """
         This will return a str of a rst table.
         :param file_path:       str of the path to the file
@@ -792,6 +863,17 @@ class SeabornTable(object):
         :param pad_last_column: bool if True will space the last column
         :param break_line:      bool if True will insert a new row when a cell
                                 has a line break i.e. \n
+        :param widths:          dict of minimal widths for each column
+        :param max_widths:      dict of maximum widths for each column, if
+                                specified then widths argument may be modified
+        :param clip_widths:     dict containing the widths of the cells in
+                                column, and the cell text will be reduced to
+                                this width if necessary, which causes the loss
+                                of data.  If this value is an int it will
+                                be converted to a dict of every column. If this
+                                value is None, then no clipping will happen.
+        :param _slice:          _slice if specified will not return the header,
+                                and will only return the rows in the _slice.
         :return:                str of the converted markdown tables
         """
         tab = self.tab if tab is None else tab
@@ -799,16 +881,24 @@ class SeabornTable(object):
             data_kwargs=dict(quote_numbers=quote_numbers,
                              quote_empty_str=quote_empty_str,
                              deliminator=' ',
-                             break_line=break_line),
-            width_kwargs=dict(padding=0, pad_last_column=pad_last_column))
+                             break_line=break_line,
+                             clip_widths=clip_widths,
+                             _slice=_slice),
+            width_kwargs=dict(padding=0,
+                              pad_last_column=pad_last_column,
+                              widths=widths,
+                              max_widths=max_widths))
         ret = self._align_cells(align, align, column_widths, list_of_list)
         bar = deliminator.join(['=' * width for width in column_widths])
         ret = [deliminator.join(row) for row in ret]
-        ret = [bar, ret[0]] + ret[1:] + [bar]
-        if break_line:
-            ret.insert(2 + max([str(c).count('\n') for c in self.columns]), bar)
-        else:
-            ret.insert(2, bar)
+        if _slice is None or _slice.start is None:
+            ret.insert(0, bar)
+            if break_line:
+                ret.insert(2 + max([str(c).count('\n') for c in self.columns]), bar)
+            else:
+                ret.insert(2, bar)
+        if _slice is None:
+            ret.append(bar)
 
         ret = tab + (u'\n' + tab).join(ret)
         self._save_file(file_path, ret)
@@ -816,7 +906,8 @@ class SeabornTable(object):
 
     def obj_to_psql(self, file_path=None, deliminator=' | ', tab=None,
                     quote_numbers=True, quote_empty_str=False, align='left',
-                    pad_last_column=None, break_line=False):
+                    pad_last_column=None, break_line=False, widths=None,
+                    max_widths=None, clip_widths=None, _slice=None):
         """
         This will return a str of a psql table.
         :param file_path:       str of the path to the file
@@ -829,17 +920,32 @@ class SeabornTable(object):
         :param pad_last_column: bool if True will space the last column
         :param break_line:      bool if True will insert a new row when a cell
                                 has a line break i.e. \n
+        :param widths:          dict of minimal widths for each column
+        :param max_widths:      dict of maximum widths for each column, if
+                                specified then widths argument may be modified
+        :param clip_widths:     dict containing the widths of the cells in
+                                column, and the cell text will be reduced to
+                                this width if necessary, which causes the loss
+                                of data.  If this value is an int it will
+                                be converted to a dict of every column. If this
+                                value is None, then no clipping will happen.
+        :param _slice:          _slice if specified will not return the header,
+                                and will only return the rows in the _slice.
         :return:                str of the converted markdown tables
         """
-        if align == 'center' or align == 'right' and pad_last_column == None:
+        if align == 'center' or align == 'right' and pad_last_column is None:
             pad_last_column = True
         tab = self.tab if tab is None else tab
         list_of_list, column_widths = self.get_data_and_shared_column_widths(
             data_kwargs=dict(quote_numbers=quote_numbers,
                              quote_empty_str=quote_empty_str,
-                             break_line=break_line),
+                             break_line=break_line,
+                             clip_widths=clip_widths,
+                             _slice=_slice),
             width_kwargs=dict(padding=0, pad_first_cell=1,
-                              pad_last_column=pad_last_column))
+                              pad_last_column=pad_last_column,
+                              widths=widths,
+                              max_widths=max_widths))
         if break_line:
             header_index = 1 + max([str(c).count('\n') for c in self.columns])
         else:
@@ -856,7 +962,8 @@ class SeabornTable(object):
                                                 pad_last_column=True)
         ret = [deliminator.join(row) for row in ret]
         bar = ('+'.join(['-' * (width - 1) for width in column_widths]))[1:]
-        ret.insert(header_index, bar)
+        if _slice is None or _slice.start is None:
+            ret.insert(header_index, bar)
         ret = tab + (u'\n' + tab).join(ret)
         self._save_file(file_path, ret)
         return ret
@@ -889,7 +996,8 @@ class SeabornTable(object):
 
     def obj_to_grid(self, file_path=None, delim=None, tab=None,
                     quote_numbers=True, quote_empty_str=False, align='left',
-                    pad_last_column=True, break_line=False):
+                    pad_last_column=True, break_line=False, widths=None,
+                    max_widths=None, clip_widths=None, _slice=None):
         """
         This will return a str of a grid table.
         :param file_path:       path to data file, defaults to
@@ -904,6 +1012,17 @@ class SeabornTable(object):
         :param pad_last_column: bool if True will space the last column
         :param break_line:      bool if True will insert a new row when a cell
                                 has a line break i.e. \n
+        :param widths:          dict of minimal widths for each column
+        :param max_widths:      dict of maximum widths for each column, if
+                                specified then widths argument may be modified
+        :param clip_widths:     dict containing the widths of the cells in
+                                column, and the cell text will be reduced to
+                                this width if necessary, which causes the loss
+                                of data.  If this value is an int it will
+                                be converted to a dict of every column. If this
+                                value is None, then no clipping will happen.
+        :param _slice:          _slice if specified will not return the header,
+                                and will only return the rows in the _slice.
         :return:                string representing the grid formation
                                 of the relevant data
         """
@@ -918,15 +1037,19 @@ class SeabornTable(object):
                                  'bottom edge', 'bottom right corner']}
         delim = delim if delim else {}
         for tag in self.FANCY.keys():
-            delim[tag] = delim[tag] if tag in delim.keys() \
-                else self.FANCY[tag]
+            delim.setdefault(tag, self.FANCY[tag])
 
         tab = self.tab if tab is None else tab
         list_of_list, column_widths = self.get_data_and_shared_column_widths(
             data_kwargs=dict(quote_numbers=quote_numbers,
                              quote_empty_str=quote_empty_str,
-                             break_line=break_line),
-            width_kwargs=dict(padding=0, pad_last_column=pad_last_column))
+                             break_line=break_line,
+                             clip_widths=clip_widths,
+                             _slice=_slice),
+            width_kwargs=dict(padding=0,
+                              pad_last_column=pad_last_column,
+                              widths=widths,
+                              max_widths=max_widths))
 
         ret = self._align_cells(align, align, column_widths, list_of_list)
         grid_row = {}
@@ -941,17 +1064,21 @@ class SeabornTable(object):
 
         ret = [delim['left edge'] + delim['internal vertical edge'].join(row) +
                delim['right edge'] for row in ret]
-
-        if break_line:
-            header_index = 1 + max([str(c).count('\n') for c in self.columns])
-            skips = [max([str(row[col]).count('\n')
-                          for col in self.columns]) for row in self]
+        skips = [0]
+        if _slice is None or _slice.start is None:
+            if break_line:
+                header_index = 1 + max(
+                    [str(c).count('\n') for c in self.columns])
+                skips = [max([str(row[col]).count('\n')
+                              for col in self.columns]) for row in self]
+            else:
+                header_index = 1
+            body = [grid_row["top"]] + ret[:header_index] + [grid_row["divide"]]
         else:
-            header_index = 1
-            skips = [0]
+            header_index = 0
+            body = [grid_row['middle']] if ret else []
 
-        body = [grid_row["top"]] + ret[:header_index] + [grid_row["divide"]]
-        skip = skips.pop(0)
+        skip = skips.pop(0) if skips else 0
         for row in ret[header_index:]:
             body.append(row)
             if skip == 0 and row is not ret[-1]:
@@ -959,32 +1086,51 @@ class SeabornTable(object):
                 skip = skips.pop(0) if skips else 0
             else:
                 skip -= 1
-        body.append(grid_row['bottom'])
+        if _slice is None:
+            body.append(grid_row['bottom'])
         ret = tab + (u'\n' + tab).join(body)
         self._save_file(file_path, ret)
         return ret
 
     def obj_to_csv(self, file_path=None, quote_everything=False,
                    align='left', quote_numbers=True,
-                   pad_last_column=None, **kwargs):
+                   pad_last_column=None, widths=None, max_widths=None,
+                   clip_widths=None, _slice=None, **kwargs):
         """
         This will return a str of a csv text that is friendly to excel
         :param file_path:        str to the path
         :param quote_everything: bool if True will quote everything if it needs
                                  it or not, this is so it looks pretty in excel.
-        :param quote_numbers:    bool if True will quote numbers that are
-                                 strings
         :param align:            str of 'left', 'right', 'center', 'none' to
                                  align the text within the cells.
+        :param quote_numbers:    bool if True will quote numbers that are
+                                 strings
+        :param pad_last_column   bool if True will space the last column
+        :param widths:           dict of minimal widths for each column
+        :param max_widths:       dict of maximum widths for each column, if
+                                 specified then widths argument may be modified
+        :param clip_widths:      dict containing the widths of the cells in
+                                 column, and the cell text will be reduced to
+                                 this width if necessary, which causes the loss
+                                 of data.  If this value is an int it will
+                                 be converted to a dict of every column. If this
+                                 value is None, then no clipping will happen.
+        :param _slice:           _slice if specified will not return the header,
+                                 and will only return the rows in the _slice.
         :return: str
         """
-        if align == 'center' or align == 'right' and pad_last_column == None:
+        if align == 'center' or align == 'right' and pad_last_column is None:
             pad_last_column = True
         list_of_list, column_widths = self.get_data_and_shared_column_widths(
             data_kwargs=dict(quote_numbers=quote_numbers,
                              quote_everything=quote_everything,
-                             safe_str=self._excel_cell),
-            width_kwargs=dict(padding=0, pad_last_column=pad_last_column))
+                             safe_str=self._excel_cell,
+                             clip_widths=clip_widths,
+                             _slice=_slice),
+            width_kwargs=dict(padding=0,
+                              pad_last_column=pad_last_column,
+                              widths=widths,
+                              max_widths=max_widths))
         csv = [','.join(row) for row in self._align_cells(
             align, align, column_widths, list_of_list)]
 
@@ -1053,7 +1199,7 @@ class SeabornTable(object):
             if file_path.endswith('.%s' % file_type):
                 obj_to_type = getattr(self, 'obj_to_%s' % file_type)
                 return obj_to_type(file_path=file_path, **kwargs)
-        raise Exception('Unknown file type: %s' % file_path)
+        raise SyntaxError('Unknown file type: %s' % file_path)
 
     def share_column_widths(self, tables, shared_limit=None):
         """
@@ -1066,7 +1212,7 @@ class SeabornTable(object):
         """
         for table in tables:
             record = (table, shared_limit)
-            if not record in self.shared_tables and table is not self:
+            if record not in self.shared_tables and table is not self:
                 self.shared_tables.append(record)
 
     def _align_cells(self, align, align_header, column_widths, list_of_list,
@@ -1086,7 +1232,7 @@ class SeabornTable(object):
         elif align_header == 'none':
             header = list_of_list[:header_index]
         else:
-            raise Exception("Unknown header align: %s", align)
+            raise SyntaxError("Unknown header align: %s", align)
 
         if align == 'left':
             body = [[cell.ljust(column_widths[i]) for i, cell in enumerate(row)]
@@ -1100,8 +1246,169 @@ class SeabornTable(object):
         elif align == 'none':
             body = list_of_list[header_index:]
         else:
-            raise Exception("Unknown body align: %s", align)
+            raise SyntaxError("Unknown body align: %s", align)
         return header + body
+
+    def setup_live_table(self, type=None, stream=None, file_path=None,
+                         file_append=False, min_widths=5, max_widths=30,
+                         clip_widths=None, recreate=False, repeat_header=None,
+                         **kwargs):
+        """
+            Setup live table will make the table write to the screen or file
+            every time a row is appended.  When this method is first called
+            it will write the header and all rows.
+        :param type           str of a known file mode this will default to
+                              the file_path type if specified else 'md'
+        :param stream:        method that takes a single str to output the
+                              table, this will default to print or
+                              file_handler.write
+        :param file_path:     str will open a file and write to the file
+        :param file_append:   bool if true will append to the file and write
+                              the current table.
+        :param min_widths:    dict containing the min widths of the columns
+                              for the screen writes.  If this value is an
+                              int then it will be converted to a dict of
+                              every column. If this value is None it will
+                              default to the header width
+        :param max_widths:    dict containing the max widths of the columns
+                              when determining the column width.  If 
+                              this value is an int then it will be 
+                              converted to a dict of every column. If 
+                              this value is less than min then it will
+                              be come min_screen_width.
+        :param clip_widths:   dict containing the widths of the cells in
+                              column, and the cell text will be reduced to
+                              this width if necessary, which causes the loss
+                              of data.  If this value is an int it will
+                              be converted to a dict of every column. If this
+                              value is None, then no clipping will happen.
+        :param recreate:      bool if true and the column widths change then
+                              the screen will write 50 line breaks to clear
+                              the screen and the whole table will be reprinted
+                              If recreate is a number, then that many line
+                              breaks will be written.
+        :param repeat_header: int to repeat the header row every X number
+                              of rows
+        :param kwargs:        dict of extra values to format the table.
+        :return:              None
+        """
+        if file_append and recreate:
+            raise NotImplemented("setup live table doesn't handle this yet")
+
+        handler = locals()
+        handler.pop('self')
+        if type is None and file_path:
+            for file_type in self.KNOWN_FORMATS:
+                if file_path.endswith('.%s' % file_type):
+                    handler['type'] = file_type
+
+        if handler['type'] not in self.KNOWN_FORMATS:
+            raise SyntaxError("File type: %s is not a known file type", type)
+
+        if isinstance(min_widths, (int, float)):
+            if isinstance(max_widths, dict):
+                handler['min_widths'] = {c: len(c) + int(min_widths)
+                                         for c in self.columns
+                                         if c in max_widths}
+            else:
+                handler['min_widths'] = {c: len(c) + int(min_widths)
+                                         for c in self.columns}
+            min_widths = handler['min_widths']
+
+        if isinstance(max_widths, (int, float)):
+            handler['max_widths'] = {c: int(max_widths) for c in self.columns
+                                     if min_widths is None or c in min_widths}
+
+        if isinstance(clip_widths, (int, float)):
+            handler['clip_widths'] = {c: int(clip_widths) for c in self.columns}
+
+        handler['widths'] = handler['min_widths']
+        handler['method'] = getattr(self, 'obj_to_%s' % handler['type'])
+
+        if file_path:
+            handler['fn'] = open(file_path, 'a' if file_append else 'w')
+
+            def write(line):
+                handler['fn'].write(line + '\n')
+                handler['fn'].flush()
+
+            handler['stream'] = write
+
+        elif stream is None:
+
+            def write(line):
+                print(line)
+
+            handler['stream'] = write
+
+        if not file_append:
+            text = handler['method'](widths=handler['widths'],
+                                     max_widths=handler['max_widths'],
+                                     clip_widths=handler['clip_widths'],
+                                     _slice=slice(None, None),
+                                     **handler['kwargs'])
+            handler['stream'](text)
+
+        self.live_table_handlers.append(handler)
+
+    def live_table_update(self):
+        for handler in self.live_table_handlers:
+            original_widths = handler['widths'].copy()
+            row = handler['method'](widths=handler['widths'],
+                                    max_widths=handler['max_widths'],
+                                    clip_widths=handler['clip_widths'],
+                                    _slice=slice(-1, None),
+                                    **handler['kwargs'])
+            if original_widths != handler['widths'] and handler['recreate']:
+                text = handler['method'](widths=handler['widths'],
+                                         max_widths=handler['max_widths'],
+                                         clip_widths=handler['clip_widths'],
+                                         _slice=slice(None, None),
+                                         **handler['kwargs'])
+                if handler.get('fn'):
+                    handler['fn'].close()
+                    handler['fn'] = open(handler['file_path'], 'w')
+                    handler['stream'](text)
+                else:
+                    if handler['recreate'] is True:
+                        handler['stream']('\n' * 50)
+                    else:
+                        handler['stream']('\n' * int(handler['recreate']))
+                    handler['stream'](text)
+            else:
+                handler['stream'](row)
+
+    def close_live_table(self, index=None):
+        if index is None:
+            for i in range(len(self.live_table_handlers) - 1, -1, -1):
+                self.close_live_table(i)
+            return
+        handler = self.live_table_handlers.pop(index)
+        if handler['type'] == 'grid':
+            draw = ['bottom left intersect', 'bottom intersect',
+                    'bottom edge', 'bottom right corner']
+            delim = handler['kwargs'].get('delim') or {}
+            for tag in self.FANCY.keys():
+                delim.setdefault(tag, self.FANCY[tag])
+            bottom_bar = delim[draw[0]]
+            bottom_bar += delim[draw[1]].join(
+                [delim[draw[2]] * handler['widths'][col]
+                 for col in self.columns
+                 if col in handler['widths']])
+            bottom_bar += delim[draw[3]]
+            tab = handler['kwargs'].get('tab', '')
+            handler['stream'](tab + bottom_bar)
+
+        if handler['type'] == 'rst':
+            deliminator = handler['kwargs'].get('deliminator', '  ')
+            tab = handler['kwargs'].get('tab', '')
+            bottom_bar = deliminator.join(['=' * handler['widths'][col]
+                                           for col in self.columns
+                                           if col in handler['widths']])
+            handler['stream'](tab + bottom_bar)
+
+        if 'fn' in handler:
+            handler['fn'].close()
 
     @property
     def tab(self):
@@ -1203,22 +1510,22 @@ class SeabornTable(object):
     def assert_valid(self):
         for c in self._columns:
             if c not in self.row_columns:
-                raise Exception(
+                raise ValueError(
                     'Column "%s" is in columns but not in row_columns' % c)
             if not isinstance(c, BASESTRING):
-                raise Exception(
+                raise ValueError(
                     'Column "%s" is "%s" and not a string' % (c, type(c)))
 
         for row in self:
             if row.column_index != self._column_index:
-                raise Exception("Table row_columns does not match row columns:"
-                                " \n%s\n%s" % (self._column_index, row))
+                raise ValueError("Table row_columns does not match row columns:"
+                                 " \n%s\n%s" % (self._column_index, row))
             if len(row) > len(self.row_columns):
-                raise Exception("Row has more values then the SeabornTable "
-                                "columns: \n%s\n%s" % (self.row_columns, row))
+                raise ValueError("Row has more values then the SeabornTable "
+                                 "columns: \n%s\n%s" % (self.row_columns, row))
             if len(row) < len(self.row_columns):
-                raise Exception("Row has less values then the SeabornTable "
-                                "columns: \n%s\n%s" % (self.row_columns, row))
+                raise ValueError("Row has less values then the SeabornTable "
+                                 "columns: \n%s\n%s" % (self.row_columns, row))
 
     def naming_convention_columns(self, convention='underscore',
                                   remove_empty=True):
@@ -1292,6 +1599,7 @@ class SeabornTable(object):
         :return: self.SeabornRow that was added to the table
         """
         self.table.append(self._normalize_row(row))
+        self.live_table_update()
         return self.table[-1]
 
     def add(self, **kwargs):
@@ -1504,7 +1812,7 @@ class SeabornTable(object):
         """
             This performs the getitem as if the table is a list,
             to treat the table as dictionary use the get method.
-        :param item: int, slice of the row or column to get
+        :param item: int, _slice of the row or column to get
         :return: row or if slice a list of rows
         """
         return self.table[item]
@@ -1713,9 +2021,17 @@ class SeabornTable(object):
     def reverse(self):
         self.table.reverse()
 
-    @staticmethod
-    def _get_column_widths(list_of_list, min_width=2, max_width=300,
+    def _get_column_widths(self, list_of_list, widths=None, max_widths=None,
                            padding=1, pad_last_column=False, pad_first_cell=0):
+        if not isinstance(widths, dict):
+            dw = widths if isinstance(widths, (int, float)) else self.MIN_WIDTHS
+            widths = {col: dw for col in self.columns}
+
+        if not isinstance(max_widths, dict):
+            dw = widths if isinstance(max_widths, (int, float)) \
+                else self.MAX_WIDTHS
+            max_widths = {col: dw for col in self.columns}
+
         def _len(text):
             if len(text) > 15:
                 pass
@@ -1726,15 +2042,23 @@ class SeabornTable(object):
                 return len(text.split('\n', 1)[0])
             return len(text)
 
-        widths = []
-        for col in range(len(list_of_list[0])):
-            width = max([_len(row[col]) + padding for row in list_of_list])
-            widths.append(max(min_width, min(max_width, width)))
+        list_widths = []
+        columns = [c for c in self.columns if c in widths]
+        if not list_of_list:
+            return [widths[col] for col in columns]
+
+        for i, cell in enumerate(list_of_list[0]):
+            col = columns[i]
+            real_width = max([_len(row[i]) + padding for row in list_of_list])
+            if widths[col] < real_width:
+                widths[col] = min(real_width, max_widths.get(col, real_width))
+            list_widths.append(widths[col])
+
         if not pad_last_column and widths:
-            widths[-1] = 0
+            list_widths[-1] = 0
         if pad_first_cell:
-            widths[0] += pad_first_cell
-        return widths
+            list_widths[0] += pad_first_cell
+        return list_widths
 
     def get_data_and_column_widths(self, data_kwargs, width_kwargs):
         """
@@ -1745,10 +2069,29 @@ class SeabornTable(object):
         data_kwargs = data_kwargs.copy()
         safe_str = data_kwargs.pop('safe_str', self._safe_str)
         break_line = data_kwargs.pop('break_line', False)
-        list_of_list = [[safe_str(col, _is_header=True, **data_kwargs)
-                         for col in self.columns]]
-        list_of_list += [[safe_str(row[col], **data_kwargs)
-                          for col in self.columns] for row in self]
+        _slice = data_kwargs.pop('_slice', None)
+        clip_widths = data_kwargs.pop('clip_widths', None) or {}
+        if isinstance(clip_widths, (float, int)):
+            clip_widths = {col: int(clip_widths) for col in self.columns}
+
+        if width_kwargs.get('widths'):
+            columns = [c for c in self.columns if c in width_kwargs['widths']]
+        elif width_kwargs.get('max_widths'):
+            columns = [c for c in self.columns
+                       if c in width_kwargs['max_widths']]
+        else:
+            columns = self.columns
+        rows = self if _slice is None else self.table[_slice]
+        list_of_list = []
+        if _slice is None or _slice.start is None:
+            list_of_list += [[safe_str(col, _is_header=True,
+                                       clip_width=clip_widths.get(col),
+                                       **data_kwargs)
+                              for col in columns]]
+        list_of_list += [[safe_str(row[col],
+                                   clip_width=clip_widths.get(col),
+                                   **data_kwargs)
+                          for col in columns] for row in rows]
         if break_line:
             self._break_line_into_multiple_rows(list_of_list)
         column_widths = self._get_column_widths(list_of_list, **width_kwargs)
@@ -1789,14 +2132,21 @@ class SeabornTable(object):
     @classmethod
     def _safe_str(cls, cell, quote_numbers=True, repr_line_break=False,
                   deliminator=None, quote_empty_str=False,
-                  quote_texts=None, title_columns=False, _is_header=False):
+                  quote_texts=None, title_columns=False, _is_header=False,
+                  clip_width=None):
         """
-        :param cell: obj to turn in to a string
-        :param quote_numbers:  bool if True will quote numbers that are strings
-        :param quote_texts:  list of characters to quote.
+        :param cell:            obj to turn in to a string
+        :param quote_numbers:   bool if True will quote numbers that are strings
         :param repr_line_break: if True will replace \n with \\n
-        :param deliminator: if the deliminator is in the cell it will be quoted
+        :param deliminator:     if the deliminator is in the cell it will be
+                                quoted
         :param quote_empty_str: bool if True will quote empty strings
+        :param quote_texts:     list of characters to quote.
+        :param title_columns:   bool if True will uppercase the first letter
+        :param _is_header:      bool if True will indicate this is the header
+        :param clip_width:      int if the size of the cell is greater than this
+                                it will be reduced, which will cause data loss.
+        :return: str
         """
         if cell is None:
             cell = ''
@@ -1820,11 +2170,16 @@ class SeabornTable(object):
                 ret = u'"%s"' % ret
         if repr_line_break:
             ret = ret.replace(u'\n', u'\\n')
+        if clip_width and len(ret) > clip_width:
+            if ret[0] == '"' and ret[-1] == '"':
+                ret = ret[:clip_width - 1] + '"'
+            else:
+                ret = ret[:clip_width]
         return ret
 
     @classmethod
     def _excel_cell(cls, cell, quote_everything=False, quote_numbers=True,
-                    _is_header=False):
+                    clip_width=None, **kwargs):
         """
         This will return a text that excel interprets correctly when
         importing csv
@@ -1832,7 +2187,10 @@ class SeabornTable(object):
         :param quote_everything: bool to quote even if not necessary
         :param quote_numbers:    bool if True will quote numbers that are
                                  strings
-        :param _is_header:       not used
+        :param clip_width:       int if the size of the cell is greater than
+                                 this it will be reduced, which will cause data
+                                 loss.
+        :param kwargs:           dict of unused parameters
         :return: str
         """
         if cell is None:
@@ -1859,7 +2217,11 @@ class SeabornTable(object):
         for special_char in [u'\r', u'\t', u'"', u',', u"'"]:
             if special_char in ret:
                 return u'"%s"' % ret
-
+        if clip_width and len(ret) > clip_width:
+            if ret[0] == '"' and ret[-1] == '"':
+                ret = ret[:clip_width - 1] + '"'
+            else:
+                ret = ret[:clip_width]
         return ret
 
     @staticmethod
@@ -2117,7 +2479,7 @@ UNICODE = unicode if sys.version_info[0] == 2 else str
 def main(cli_args=sys.argv[1:]):
     parser = ArgumentParser(
         description='The seaborn_table library used as a script will convert'
-                    ' one file type (%s) to another file type.'%', '.join(
+                    ' one file type (%s) to another file type.' % ', '.join(
             SeabornTable.KNOWN_FORMATS))
     parser.add_argument('source', help='source file to be converted')
     parser.add_argument('destination', help='destination file to be created')
@@ -2130,7 +2492,7 @@ def main(cli_args=sys.argv[1:]):
     args = parser.parse_args(cli_args)
     table = SeabornTable.file_to_obj(args.source)
     if args.columns:
-        table.columns=args.columns
+        table.columns = args.columns
     if args.order_by:
         table.sort_by_key(keys=[a.replace('~', '-') for a in args.order_by])
     table.obj_to_file(args.destination)

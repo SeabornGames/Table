@@ -1,3 +1,16 @@
+Changes in 6.3.0
+================
+
+* Added a feature of setup_live_table; which will write to a file or screen
+  every time a row is added.
+
+* Updated Exception types to specify the type of error.
+
+* MIN_WIDTH and MAX_WIDTH can now be set at the class level.
+
+* max_width, width, clip_width, and slice have now been added to all obj_to_*.
+
+
 Changes in 6.2.0
 ================
 
