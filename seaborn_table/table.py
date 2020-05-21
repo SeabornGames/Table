@@ -1064,7 +1064,7 @@ class SeabornTable(object):
 
         ret = [delim['left edge'] + delim['internal vertical edge'].join(row) +
                delim['right edge'] for row in ret]
-
+        skips = [0]
         if _slice is None or _slice.start is None:
             if break_line:
                 header_index = 1 + max(
@@ -1073,14 +1073,12 @@ class SeabornTable(object):
                               for col in self.columns]) for row in self]
             else:
                 header_index = 1
-                skips = [0]
             body = [grid_row["top"]] + ret[:header_index] + [grid_row["divide"]]
         else:
-            skips = [0]
             header_index = 0
-            body = []
+            body = [grid_row['middle']] if ret else []
 
-        skip = skips.pop(0)
+        skip = skips.pop(0) if skips else 0
         for row in ret[header_index:]:
             body.append(row)
             if skip == 0 and row is not ret[-1]:
@@ -1285,8 +1283,10 @@ class SeabornTable(object):
                               be converted to a dict of every column. If this
                               value is None, then no clipping will happen.
         :param recreate:      bool if true and the column widths change then
-                              the screen will be cleared and the table
-                              reprinted
+                              the screen will write 50 line breaks to clear
+                              the screen and the whole table will be reprinted
+                              If recreate is a number, then that many line
+                              breaks will be written.
         :param repeat_header: int to repeat the header row every X number
                               of rows
         :param kwargs:        dict of extra values to format the table.
@@ -1365,12 +1365,15 @@ class SeabornTable(object):
                                          clip_widths=handler['clip_widths'],
                                          _slice=slice(None, None),
                                          **handler['kwargs'])
-                if handler['fn']:
+                if handler.get('fn'):
                     handler['fn'].close()
                     handler['fn'] = open(handler['file_path'], 'w')
                     handler['stream'](text)
                 else:
-                    handler['stream']('\n' * 20)
+                    if handler['recreate'] is True:
+                        handler['stream']('\n' * 50)
+                    else:
+                        handler['stream']('\n' * int(handler['recreate']))
                     handler['stream'](text)
             else:
                 handler['stream'](row)
@@ -2071,9 +2074,9 @@ class SeabornTable(object):
         if isinstance(clip_widths, (float, int)):
             clip_widths = {col: int(clip_widths) for col in self.columns}
 
-        if 'widths' in width_kwargs:
+        if width_kwargs.get('widths'):
             columns = [c for c in self.columns if c in width_kwargs['widths']]
-        elif 'max_widths' in width_kwargs:
+        elif width_kwargs.get('max_widths'):
             columns = [c for c in self.columns
                        if c in width_kwargs['max_widths']]
         else:
