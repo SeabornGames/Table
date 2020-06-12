@@ -16,7 +16,7 @@ setup(
     author='Ben Christenson',
     author_email='Python@BenChristenson.com',
     url='https://github.com/SeabornGames/SeabornTable',
-    install_requires=['pyyaml==5'
+    install_requires=['pyyaml>5.1.1'
     ],
     extras_require={
     },
