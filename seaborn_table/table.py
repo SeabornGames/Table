@@ -66,7 +66,7 @@ class SeabornRow(list):
         return {col: list.__getitem__(self, self.column_index[col])
                 for col in columns}
 
-    def obj_to_ordered_dict(self, columns=None):
+    def obj_to_ordered_dict(self, columns=None, OrderedDict=OrderedDict):
         columns = columns if columns else self.column_index.keys()
         return OrderedDict([
             (col, list.__getitem__(self, self.column_index[col]))
@@ -345,7 +345,18 @@ class SeabornTable(object):
             with open(file_path, 'r') as fn:
                 text = fn.read()
 
-        yaml_data = yaml.load(text)
+        class OrderedLoader(yaml.SafeLoader):
+            pass
+
+        def construct_mapping(loader, node):
+            loader.flatten_mapping(node)
+            return OrderedDict(loader.construct_pairs(node))
+
+        OrderedLoader.add_constructor(
+            yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+            construct_mapping)
+        yaml_data = yaml.load(text, OrderedLoader)
+
         if columns is None and guess_column_order:
             columns = sorted(cls(table=yaml_data).row_columns,
                              key=lambda x: text.find('"%s":' % x))
@@ -1015,14 +1026,27 @@ class SeabornTable(object):
         :return:               string representing the grid formation
                                of the relevant data
         """
-        data = [row.obj_to_ordered_dict(self.columns) for row in self]
+        class YamlOrderedDict(OrderedDict):
+            pass
+
+        def _dict_representer(dumper, data):
+            return dumper.represent_mapping(
+                yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+                data.items())
+
+        yaml.SafeDumper.add_representer(YamlOrderedDict, _dict_representer)
+
+        data = [row.obj_to_ordered_dict(
+            self.columns, OrderedDict=YamlOrderedDict) for row in self]
 
         if not quote_numbers:
             for row in data:
                 for k, v in row.items():
                     if isinstance(v, (bool, int, float)):
                         row[k] = str(row[k])
-        ret = yaml.dump_all(data, sort_keys=sort_keys, indent=indent)
+
+        ret = yaml.dump_all([data], sort_keys=sort_keys, indent=indent,
+                            Dumper=yaml.SafeDumper, allow_unicode=True)
         if sys.version_info[0] == 2:
             ret = ret.replace(', \n', ',\n')
         self._save_file(file_path, ret)
@@ -2530,20 +2554,6 @@ class HTMLRowRespan(object):
 
     def __cmp__(self, other):
         return self.value != other
-
-
-# This will make it so yaml can read and write Ordered Dictionaries
-def dict_representer(dumper, data):
-    return dumper.represent_dict(data.iteritems())
-
-
-def dict_constructor(loader, node):
-    return OrderedDict(loader.construct_pairs(node))
-
-
-yaml.add_representer(OrderedDict, dict_representer)
-yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
-                     dict_constructor)
 
 
 BASESTRING = basestring if sys.version_info[0] == 2 else str
