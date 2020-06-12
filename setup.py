@@ -9,14 +9,14 @@ except Exception:
 
 setup(
     name='seaborn-table',
-    version='6.3.0',
+    version='6.4.0',
     description='SeabornTable reads and writes tables in '
                 'csv and md and acts like a list and dict."',
     long_description=long_description,
     author='Ben Christenson',
     author_email='Python@BenChristenson.com',
     url='https://github.com/SeabornGames/SeabornTable',
-    install_requires=[
+    install_requires=['pyyaml==5'
     ],
     extras_require={
     },

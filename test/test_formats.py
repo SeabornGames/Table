@@ -183,6 +183,10 @@ class LiveTableTest(BaseTest, FormatMixin):
     def test_json(self):
         unittest.skip("Not Applicable")
 
+    def test_yaml(self):
+        unittest.skip("Not Applicable")
+
+
 
 if __name__ == '__main__':
     unittest.main()

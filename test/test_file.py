@@ -43,6 +43,9 @@ class FileConversionTestGrid(BaseTest, FileConversionMixin):
 class FileConversionTestJson(BaseTest, FileConversionMixin):
     DEST = 'json'
 
+class FileConversionTestYaml(BaseTest, FileConversionMixin):
+    DEST = 'yaml'
+
 
 class FileConversionTestRst(BaseTest, FileConversionMixin):
     DEST = 'rst'
