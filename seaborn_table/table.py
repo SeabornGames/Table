@@ -1050,8 +1050,6 @@ class SeabornTable(object):
 
         ret = yaml.dump_all([data], sort_keys=sort_keys, indent=indent,
                             Dumper=yaml.SafeDumper, allow_unicode=True)
-        if sys.version_info[0] == 2:
-            ret = ret.replace(', \n', ',\n')
         self._save_file(file_path, ret)
         return ret
 
