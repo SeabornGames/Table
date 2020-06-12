@@ -355,7 +355,10 @@ class SeabornTable(object):
         OrderedLoader.add_constructor(
             yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
             construct_mapping)
-        yaml_data = yaml.load(text, OrderedLoader)
+        if '\n...' in text:
+            yaml_data = list(yaml.load_all(text, OrderedLoader))
+        else:
+            yaml_data = yaml.load(text, OrderedLoader)
 
         if columns is None and guess_column_order:
             columns = sorted(cls(table=yaml_data).row_columns,
