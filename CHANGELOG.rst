@@ -1,3 +1,22 @@
+Changes in 6.5.0
+================
+
+* Added ``transpose`` method to transpose the table.
+
+* Added argument ``--limit`` and ``--offset`` to reduce rows.
+
+* Added argument ``--transpose`` to transpose the table.
+
+* Added argument ``--column-key`` to key table before transposing.
+
+* Added argument ``key-only`` to reduce rows to certain keys within
+  --column-key.
+
+* Added ``--print`` option to only print the table to the screen.
+
+* Fixed bug in list_to_obj where columns is specified.
+
+
 Changes in 6.4.0
 ================
 

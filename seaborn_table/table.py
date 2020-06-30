@@ -264,7 +264,7 @@ class SeabornTable(object):
             table = [cls.SeabornRow(column_index, row) for row in list_]
 
         elif isinstance(list_[0], (list, tuple)):
-            row_columns = row_columns or list_[0]
+            row_columns = row_columns or columns or list_[0]
             if list_[0] == row_columns:
                 list_ = list_[1:]
             column_index = cls._create_column_index(row_columns)
@@ -942,7 +942,8 @@ class SeabornTable(object):
         if _slice is None or _slice.start is None:
             ret.insert(0, bar)
             if break_line:
-                ret.insert(2 + max([str(c).count('\n') for c in self.columns]), bar)
+                ret.insert(2 + max([str(c).count('\n') for c in self.columns]),
+                           bar)
             else:
                 ret.insert(2, bar)
         if _slice is None:
@@ -1285,6 +1286,40 @@ class SeabornTable(object):
                 obj_to_type = getattr(self, 'obj_to_%s' % file_type)
                 return obj_to_type(file_path=file_path, **kwargs)
         raise SyntaxError('Unknown file type: %s' % file_path)
+
+    def transpose(self, include_header=True, new_columns=None,
+                  columns_only=True, offset=0):
+        """
+            Returns a SeabornTable with the rows/columns transposed
+        :param include_header: bool if true the header will be returned as the
+                               first columns
+        :param new_columns:    list of the new columns if not specified it will
+                               default to the key or ``row_%s``
+        :param columns_only:   bool if true only columns with self.columns will
+                               be converted to row as opposed to row_columns
+        :param offset:         int offset used when creating the rows
+        :return:               SeabornTable with the row/columns transposed
+        """
+        columns = self.columns if columns_only else self.row_columns
+        if new_columns is None:
+            new_columns = []
+            if include_header:
+                new_columns.append(self.column_key or 'Header')
+            if self.column_key in columns:
+                columns.remove(self.column_key)
+            if self.column_key:
+                new_columns += [row[self.column_key] for row in self]
+            else:
+                new_columns += ['Row_%s' % i
+                                for i in range(offset, offset + len(self))]
+
+        data = []
+        for col in columns:
+            new_row = [col] if include_header else []
+            data.append(new_row + [row[col] for row in self])
+
+        return SeabornTable(data, columns=new_columns, tab=self._tab,
+                            deliminator=self._deliminator)
 
     def share_column_widths(self, tables, shared_limit=None):
         """
@@ -2573,14 +2608,50 @@ def main(cli_args=sys.argv[1:]):
     parser.add_argument('--order-by', nargs='+', default=None,
                         help='If specified will reorder the rows with ``~``'
                              ' reversing the order.')
+    parser.add_argument('--limit', type=int, default=None,
+                        help='reduce the number of rows by limit')
+    parser.add_argument('--offset', type=int, default=None,
+                        help='reduce the number of rows by limit')
+    parser.add_argument('--transpose', default=False, action='store_true',
+                        help='if specified then the table will be transposed')
+    parser.add_argument('--column-key', default=None,
+                        help='key the table on this and use it as row header'
+                             ' when transposing')
+    parser.add_argument('--key-only', default=None, nargs='+',
+                        help='if --key-on then this will reduce the table to'
+                             ' only these rows')
+    parser.add_argument('--print', default=False, action='store_true',
+                        help='if specified then it wont save to file but only'
+                             ' print to the screen.  This can also be done'
+                             ' by having the destingation be ``_``')
+    parser.add_argument('--break-line', default=False, action='store_true',
+                        help='if specified then the break line will be'
+                             ' set true when creating table')
 
     args = parser.parse_args(cli_args)
     table = SeabornTable.file_to_obj(args.source)
+    if args.offset:
+        table.table = table.table[args.offset:]
+    if args.limit:
+        table.table = table.table[:args.limit]
+    if args.column_key:
+        table.column_key = args.column_key
+        if args.key_only:
+            table.table = [table.get(key) for key in args.key_only]
+            table.column_key = args.column_key
+
     if args.columns:
         table.columns = args.columns
     if args.order_by:
         table.sort_by_key(keys=[a.replace('~', '-') for a in args.order_by])
-    table.obj_to_file(args.destination)
+    if args.transpose:
+        table = table.transpose(offset=args.offset)
+
+    if args.print or args.destination.split('.')[0] == '_':
+        file_type = args.destination.split('.')[-1]
+        print(getattr(table, 'obj_to_%s'%file_type)(break_line=args.break_line))
+    else:
+        table.obj_to_file(args.destination, break_line=args.break_line)
 
 
 if __name__ == '__main__':
