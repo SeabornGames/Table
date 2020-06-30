@@ -1,3 +1,9 @@
+Changes in 6.4.0
+================
+
+* Added capability of handling yaml.
+
+
 Changes in 6.3.0
 ================
 

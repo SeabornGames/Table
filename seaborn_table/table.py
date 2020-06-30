@@ -17,6 +17,7 @@
     > seaborn_table source_file destination_file
 """
 import json
+import yaml
 import os
 import sys
 from argparse import ArgumentParser
@@ -65,7 +66,7 @@ class SeabornRow(list):
         return {col: list.__getitem__(self, self.column_index[col])
                 for col in columns}
 
-    def obj_to_ordered_dict(self, columns=None):
+    def obj_to_ordered_dict(self, columns=None, OrderedDict=OrderedDict):
         columns = columns if columns else self.column_index.keys()
         return OrderedDict([
             (col, list.__getitem__(self, self.column_index[col]))
@@ -107,7 +108,8 @@ class SeabornTable(object):
     SeabornRow = SeabornRow
     MIN_WIDTHS = 2
     MAX_WIDTHS = 300
-    KNOWN_FORMATS = ['md', 'txt', 'psql', 'rst', 'html', 'grid', 'json', 'csv']
+    KNOWN_FORMATS = ['md', 'txt', 'psql', 'rst', 'html', 'grid', 'json', 'csv',
+                     'yaml']
     DEFAULT_DELIMINATOR = u'\t'
     DEFAULT_TAB = u''
     ENCODING = 'utf-8'
@@ -323,6 +325,52 @@ class SeabornTable(object):
 
         return cls(table, columns=columns, row_columns=row_columns,
                    key_on=key_on, **kwargs)
+
+    @classmethod
+    def yaml_to_obj(cls, file_path=None, text='', columns=None,
+                    key_on=None, guess_column_order=True, eval_cells=True,
+                    **kwargs):
+        """
+        :param file_path:   str of the path to the file
+        :param text:        str of the yaml text
+        :param columns:     list of strings to label the columns on print out
+        :param key_on:      str, tuple, or list if assigned the table can be
+                            treated as a dictionary.  This is slow but dynamic.
+        :param guess_column_order: bool if true will guess at the order
+        :param eval_cells:  bool if True will try to evaluate numbers
+        :param kwargs:      dictionary of values __init__ can take.
+        :return: SeabornTable
+        """
+        if file_path is not None:
+            with open(file_path, 'r') as fn:
+                text = fn.read()
+
+        class OrderedLoader(yaml.SafeLoader):
+            pass
+
+        def construct_mapping(loader, node):
+            loader.flatten_mapping(node)
+            return OrderedDict(loader.construct_pairs(node))
+
+        OrderedLoader.add_constructor(
+            yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+            construct_mapping)
+        if '\n...' in text:
+            yaml_data = list(yaml.load_all(text, OrderedLoader))
+        else:
+            yaml_data = yaml.load(text, OrderedLoader)
+
+        if columns is None and guess_column_order:
+            columns = sorted(cls(table=yaml_data).row_columns,
+                             key=lambda x: text.find('"%s":' % x))
+
+        ret = cls(table=yaml_data, columns=columns, key_on=key_on, **kwargs)
+        if eval_cells is False:
+            for row in ret:
+                for i, cell in enumerate(row):
+                    if isinstance(cell, (int, float, bool)):
+                        row[i] = str(cell)
+        return ret
 
     @classmethod
     def json_to_obj(cls, file_path=None, text='', columns=None,
@@ -965,6 +1013,43 @@ class SeabornTable(object):
         if _slice is None or _slice.start is None:
             ret.insert(header_index, bar)
         ret = tab + (u'\n' + tab).join(ret)
+        self._save_file(file_path, ret)
+        return ret
+
+    def obj_to_yaml(self, file_path=None, quote_numbers=True, indent=2,
+                    sort_keys=False, **kwargs):
+        """
+        This will return a str of a yaml list.
+        :param file_path:      path to data file, defaults to
+                               self's contents if left alone
+        :param indent:         int if set to 2 will indent to spaces and include
+                               line breaks.
+        :param sort_keys:      sorts columns as oppose to column order.
+        :param quote_numbers:  bool if True will quote numbers that are strings
+        :return:               string representing the grid formation
+                               of the relevant data
+        """
+        class YamlOrderedDict(OrderedDict):
+            pass
+
+        def _dict_representer(dumper, data):
+            return dumper.represent_mapping(
+                yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+                data.items())
+
+        yaml.SafeDumper.add_representer(YamlOrderedDict, _dict_representer)
+
+        data = [row.obj_to_ordered_dict(
+            self.columns, OrderedDict=YamlOrderedDict) for row in self]
+
+        if not quote_numbers:
+            for row in data:
+                for k, v in row.items():
+                    if isinstance(v, (bool, int, float)):
+                        row[k] = str(row[k])
+
+        ret = yaml.dump_all([data], sort_keys=sort_keys, indent=indent,
+                            Dumper=yaml.SafeDumper, allow_unicode=True)
         self._save_file(file_path, ret)
         return ret
 

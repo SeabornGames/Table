@@ -102,6 +102,9 @@ class FormatMixin:
     def test_json(self):
         self.validate_test_condition('json')
 
+    def test_yaml(self):
+        self.validate_test_condition('yaml')
+
     def test_rst(self):
         self.validate_test_condition('rst')
 
