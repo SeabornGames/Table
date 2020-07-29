@@ -2610,7 +2610,7 @@ def main(cli_args=sys.argv[1:]):
                              ' reversing the order.')
     parser.add_argument('--limit', type=int, default=None,
                         help='reduce the number of rows by limit')
-    parser.add_argument('--offset', type=int, default=None,
+    parser.add_argument('--offset', type=int, default=0,
                         help='reduce the number of rows by limit')
     parser.add_argument('--transpose', default=False, action='store_true',
                         help='if specified then the table will be transposed')
@@ -2623,7 +2623,7 @@ def main(cli_args=sys.argv[1:]):
     parser.add_argument('--print', default=False, action='store_true',
                         help='if specified then it wont save to file but only'
                              ' print to the screen.  This can also be done'
-                             ' by having the destingation be ``_``')
+                             ' by having the destingation be ``_`` or ``-``')
     parser.add_argument('--break-line', default=False, action='store_true',
                         help='if specified then the break line will be'
                              ' set true when creating table')
@@ -2647,8 +2647,11 @@ def main(cli_args=sys.argv[1:]):
     if args.transpose:
         table = table.transpose(offset=args.offset)
 
-    if args.print or args.destination.split('.')[0] == '_':
-        file_type = args.destination.split('.')[-1]
+    if args.print or args.destination.split('.')[0] in ['-', '_']:
+        if '.' in args.destination:
+            file_type = args.destination.split('.')[-1]
+        else:
+            file_type = 'rst'
         print(getattr(table, 'obj_to_%s'%file_type)(break_line=args.break_line))
     else:
         table.obj_to_file(args.destination, break_line=args.break_line)
