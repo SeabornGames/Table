@@ -2614,6 +2614,8 @@ def main(cli_args=sys.argv[1:]):
                         help='reduce the number of rows by limit')
     parser.add_argument('--transpose', default=False, action='store_true',
                         help='if specified then the table will be transposed')
+    parser.add_argument('--exclude-columns', default=None, nargs='+',
+                        help='exclude these columns from the row header')
     parser.add_argument('--column-key', default=None,
                         help='key the table on this and use it as row header'
                              ' when transposing')
@@ -2642,11 +2644,13 @@ def main(cli_args=sys.argv[1:]):
 
     if args.columns:
         table.columns = args.columns
+    for column in (args.exclude_columns or []):
+        if column in table.columns:
+            table.columns.remove(column)
     if args.order_by:
         table.sort_by_key(keys=[a.replace('~', '-') for a in args.order_by])
     if args.transpose:
         table = table.transpose(offset=args.offset)
-
     if args.print or args.destination.split('.')[0] in ['-', '_']:
         if '.' in args.destination:
             file_type = args.destination.split('.')[-1]
