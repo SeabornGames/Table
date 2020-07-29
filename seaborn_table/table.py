@@ -1611,6 +1611,7 @@ class SeabornTable(object):
                 self.column_key, self.row_columns))
         index = self._column_index[self.column_key]
         for row in self:
+            row[index] = str(row[index])
             self._column_key_dict[row[index]] = row
 
     @property
@@ -2629,9 +2630,13 @@ def main(cli_args=sys.argv[1:]):
     parser.add_argument('--break-line', default=False, action='store_true',
                         help='if specified then the break line will be'
                              ' set true when creating table')
+    parser.add_argument('--skip-eval', default=False, action='store_ture',
+                        help='if specified then the cells will not be evaluated'
+                             ' to numbers and other types')
 
     args = parser.parse_args(cli_args)
-    table = SeabornTable.file_to_obj(args.source)
+    table = SeabornTable.file_to_obj(args.source,
+                                     eval_cell=not args.skip_eval)
     if args.offset:
         table.table = table.table[args.offset:]
     if args.limit:
