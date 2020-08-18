@@ -9,10 +9,10 @@ class QuoteNumbersTest(BaseTest, FormatMixin):
     def validate_test_condition(self, source):
         table = self.get_base_table()
         table.map(lambda x: UNICODE(x))
-        result_file = self.test_data_path('_quote_numbers',
+        result_file = self.get_data_path('_quote_numbers',
                                           'test_quote.%s' % source)
         table.obj_to_file(result_file, quote_numbers=False)
-        expected_file = self.test_data_path('expected',
+        expected_file = self.get_data_path('expected',
                                             'test_quote.%s' % source)
         self.assert_result_file(expected_file, result_file)
         self.remove_file(result_file)
@@ -20,7 +20,7 @@ class QuoteNumbersTest(BaseTest, FormatMixin):
 
 class EvalCellsFalseTest(BaseTest, FormatMixin):
     def validate_test_condition(self, source):
-        file_path = self.test_data_path('test_file.%s' % source)
+        file_path = self.get_data_path('test_file.%s' % source)
         table = SeabornTable.file_to_obj(eval_cells=False, file_path=file_path)
         assert isinstance(table[0]['TU'], BASESTRING)
 
@@ -35,10 +35,10 @@ class InsertPopRemoveColumnTest(BaseTest, FormatMixin):
         table.insert(None, 'pop_empty_columns')
         table.remove_column('remove_column')
         table.pop_empty_columns()
-        result_file = self.test_data_path('_column_results',
+        result_file = self.get_data_path('_column_results',
                                           'test_file.%s' % source)
         table.obj_to_file(result_file)
-        expected_file = self.test_data_path('test_file.%s' % source)
+        expected_file = self.get_data_path('test_file.%s' % source)
         self.assert_result_file(expected_file, result_file)
         self.remove_file(result_file)
 
@@ -58,9 +58,9 @@ class HeaderOnlyTest(BaseTest, FormatMixin):
             'TEST COL 1', 'TEST COL TWO', 'LAST COL'])
         text = expected.obj_to_type(source)
         result = SeabornTable.type_to_obj(source, text=text)
-        expected_file = self.test_data_path('expected',
+        expected_file = self.get_data_path('expected',
                                             'header_only.%s' % source)
-        result_file = self.test_data_path('_header_only',
+        result_file = self.get_data_path('_header_only',
                                           'header_only.%s' % source)
         expected.obj_to_file(expected_file)
         result.obj_to_file(result_file)
@@ -78,13 +78,13 @@ class SharedColumnTest(BaseTest, FormatMixin):
 
     def validate_test_condition(self, source):
         tables = [SeabornTable.file_to_obj(
-            file_path=self.test_data_path('test_share_columns_%s.rst' % i))
+            file_path=self.get_data_path('test_share_columns_%s.rst' % i))
             for i in range(4)]
         for table in tables:
             table.share_column_widths(tables, self.SHARED_LIMIT)
         basename = self.BASENAME % source
-        expected_file = self.test_data_path('expected', basename)
-        result_file = self.test_data_path('_shared', basename)
+        expected_file = self.get_data_path('expected', basename)
+        result_file = self.get_data_path('_shared', basename)
         with open(result_file, 'w') as fn:
             for table in tables:
                 text = table.obj_to_type(source) + u'\n\n'
@@ -122,20 +122,20 @@ class LineBreakTest(BaseTest, FormatMixin):
                  'cell 2, 2.0\ncell 2, 2.1\ncell 2, 2.2',
                  'cell 2, 3'],
                 ['cell 3, 1',
-                 'cell 3, 2',
+                 '\ncell 3, 2',
                  'cell 3, 3.0\ncell 3, 3.1\ncell 3, 3.2\ncell 3, 3.3'],
                 ['cell 4, 1.0\n               cell 4, 1.1',
                  'cell 4, 2.0\ncell 4, 2.1',
                  'cell 4, 3.0\ncell 4, 3.1\ncell 4, 3.2'],
-                ['cell 5, 1',
+                ['\n\ncell 5, 1',
                  'cell 5, 2',
                  'cell 5, 3']]
         table = SeabornTable(data, row_columns=['Header 1',
                                                 'Header 2.0\nHeader 2.1',
                                                 'Header 3'])
         basename = self.BASENAME % source
-        expected_file = self.test_data_path('expected', basename)
-        result_file = self.test_data_path('_shared', basename)
+        expected_file = self.get_data_path('expected', basename)
+        result_file = self.get_data_path('_shared', basename)
         table.obj_to_file(result_file, break_line=True)
         self.assert_result_file(expected_file, result_file)
         self.remove_file(result_file)
@@ -152,9 +152,9 @@ class LiveTableTest(BaseTest, FormatMixin):
             [1.12, 'very long cell', 3.12, 'h2'],
             [1, 'very long cell to be clipped', 3, '']
         ]
-        result_file = self.test_data_path('_live_table',
+        result_file = self.get_data_path('_live_table',
                                           self.BASENAME+'.'+source)
-        expected_file = self.test_data_path('expected',
+        expected_file = self.get_data_path('expected',
                                             self.BASENAME+'_%s.'+source)
         table = SeabornTable(
             data[:1],

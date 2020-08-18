@@ -3,10 +3,36 @@ import unittest
 import time
 import logging
 
-from seaborn_table.table import SeabornTable
+from seaborn_table.table import SeabornTable, main
 from test.support import BaseTest
 
 log = logging.getLogger(__name__)
+
+
+class SeabornCommand(BaseTest):
+    def test_command_convert(self):
+        result = self.get_data_path('result', 'test_command_convert.md')
+        expected = self.get_data_path('expected', 'test_command_convert.md')
+        main([self.get_data_path('seaborn_command.csv'), result,
+              '--offset', '1', '--limit', '-1', '--order-by', 'Role',
+              '--columns', 'TU', 'Role', 'Player', 'Action'])
+        self.assert_result_file(expected, result)
+
+    def test_command_transpose(self):
+        result = self.get_data_path('result', 'test_command_transpose.md')
+        expected = self.get_data_path('expected', 'test_command_transpose.md')
+        main([self.get_data_path('seaborn_command.csv'), result,
+              '--order-by', 'Role', '--transpose', '--column-key', 'Role',
+              '--columns', 'Role', 'Player', 'Action'])
+        self.assert_result_file(expected, result)
+
+    def test_command_transpose2(self):
+        result = self.get_data_path('result', 'test_command_transpose2.md')
+        expected = self.get_data_path('expected', 'test_command_transpose2.md')
+        main([self.get_data_path('seaborn_command.csv'), result,
+              '--transpose', '--column-key', 'Player',
+              '--key-only', 'Ben', 'Ed'])
+        self.assert_result_file(expected, result)
 
 
 class ExampleTableTest(BaseTest):
@@ -113,7 +139,7 @@ class ExampleTableTest(BaseTest):
         table = SeabornTable([['aaa', 'a_b_c', 'c'],
                               [1, '2\n2', '3'],
                               ['4', '5', '"Verdi: "Aida""']])
-        result_file = self.test_data_path('_result', 'test_excel_csv.csv')
+        result_file = self.get_data_path('_result', 'test_excel_csv.csv')
         table.obj_to_csv(file_path=result_file)
         table2 = SeabornTable.csv_to_obj(file_path=result_file)
         table2.naming_convention_columns("underscore")
@@ -125,20 +151,20 @@ class ExampleTableTest(BaseTest):
 
     def test_html(self):
         table = self.test_pertibate()
-        answer_file = self.test_data_path('test_pertibate.html')
+        answer_file = self.get_data_path('test_pertibate.html')
         with open(answer_file, 'r') as f:
             answer = f.read()
-        result_file = self.test_data_path('_result', 'test_pertibate.html')
+        result_file = self.get_data_path('_result', 'test_pertibate.html')
         table.obj_to_html(file_path=result_file)
         self.assertEqual(answer, table.obj_to_html())
         self.remove_file(result_file)
 
     def test_mark_down(self):
-        with open(self.test_data_path('test.md')) as f:
+        with open(self.get_data_path('test.md')) as f:
             prev = f.read()
 
         test = SeabornTable.mark_down_to_dict_of_obj(
-            self.test_data_path('test.md'))
+            self.get_data_path('test.md'))
 
         paragraphs = prev.split("####")[1:]
         header = word = text = ''
@@ -171,9 +197,9 @@ class ExampleTableTest(BaseTest):
         self.assertEqual(results, answer)
 
     def test_quote_texts(self):
-        table = SeabornTable.md_to_obj(self.test_data_path('test_file.md'))
-        expected_file = self.test_data_path('expected', 'test_quote_texts.txt')
-        result_file = self.test_data_path('_result', 'test_quote_texts.txt')
+        table = SeabornTable.md_to_obj(self.get_data_path('test_file.md'))
+        expected_file = self.get_data_path('expected', 'test_quote_texts.txt')
+        result_file = self.get_data_path('_result', 'test_quote_texts.txt')
         table.obj_to_txt(file_path=result_file, quote_texts=['None'])
         self.assert_result_file(expected_file, result_file)
         self.remove_file(result_file)

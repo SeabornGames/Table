@@ -24,8 +24,8 @@ class BaseTest(unittest.TestCase):
             result = fp.read().decode('utf-8').replace('\r', '').split('\n')
 
         # uncomment to create expected files
-        # with open(expected_file, 'w') as fp:
-        #     fp.write('\n'.join(result))
+        with open(expected_file, 'w') as fp:
+            fp.write('\n'.join(result))
 
         with open(expected_file, 'rb') as fp:
             expected = fp.read().decode('utf-8').replace('\r', '').split('\n')
@@ -33,7 +33,7 @@ class BaseTest(unittest.TestCase):
         for i in range(len(result)):
             self.assertEqual(expected[i], result[i], message)
 
-    def test_data_path(self, *args):
+    def get_data_path(self, *args):
         path = os.path.join(PATH, 'data', *args)
         if not os.path.exists(os.path.dirname(path)):
             os.mkdir(os.path.dirname(path))
@@ -46,7 +46,7 @@ class BaseTest(unittest.TestCase):
 
     def get_base_table(self):
         return SeabornTable.file_to_obj(
-            file_path=self.test_data_path('test_file.rst'))
+            file_path=self.get_data_path('test_file.rst'))
 
     @classmethod
     def setUpClass(cls):

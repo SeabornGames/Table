@@ -7,9 +7,9 @@ from test.support import BaseTest, FormatMixin
 class FileConversionMixin(FormatMixin):
     def validate_test_condition(self, source):
         dest = self.DEST
-        source_file = self.test_data_path('test_file.%s' % source)
-        expected_file = self.test_data_path('test_file.%s' % dest)
-        result_file = self.test_data_path('_%s' % source, 'test_file.%s' % dest)
+        source_file = self.get_data_path('test_file.%s' % source)
+        expected_file = self.get_data_path('test_file.%s' % dest)
+        result_file = self.get_data_path('_%s' % source, 'test_file.%s' % dest)
         cli_converter([source_file, result_file])
         self.assert_result_file(expected_file, result_file,
                                 "Failure converting %s into %s" % (
@@ -57,9 +57,9 @@ class FileConversionTestPsql(BaseTest, FileConversionMixin):
 
 class ParseArgsTest(BaseTest):
     def validate_test_condition(self, name, source, dest, *columns):
-        source_file = self.test_data_path('test_file.%s' % source)
-        expected_file = self.test_data_path('expected', '%s.%s' % (name, dest))
-        result_file = self.test_data_path('_parse_args', '%s.%s' % (name, dest))
+        source_file = self.get_data_path('test_file.%s' % source)
+        expected_file = self.get_data_path('expected', '%s.%s' % (name, dest))
+        result_file = self.get_data_path('_parse_args', '%s.%s' % (name, dest))
         cli_converter([source_file, result_file] + list(columns))
         self.assert_result_file(expected_file, result_file,
                                 "Failure converting %s into %s" % (
