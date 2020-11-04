@@ -1,3 +1,9 @@
+Changes in 6.6.0
+================
+
+* Added ``rename_column`` method for renaming column.
+
+
 Changes in 6.5.0
 ================
 

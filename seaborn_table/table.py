@@ -1576,6 +1576,20 @@ class SeabornTable(object):
         for index, col in enumerate(value):
             self._column_index[col] = index
 
+    def rename_column(self, old_name, new_name):
+        """
+        The column will be renamed
+        :param old_name: str of the old name of the column
+        :param new_name: str of the new name of the column
+        :return: None
+        """
+        if old_name in self._column_index:
+            self._column_index[new_name] = self._column_index.pop(old_name)
+        if old_name in self._row_columns:
+            self._row_columns[self._row_columns.index(old_name)] = new_name
+        if old_name in self.columns:
+            self._columns[self._columns.index(old_name)] = new_name
+
     @property
     def key_on(self):
         return self._key_on
