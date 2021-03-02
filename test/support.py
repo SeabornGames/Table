@@ -24,8 +24,8 @@ class BaseTest(unittest.TestCase):
             result = fp.read().decode('utf-8').replace('\r', '').split('\n')
 
         # uncomment to create expected files
-        with open(expected_file, 'w') as fp:
-            fp.write('\n'.join(result))
+        # with open(expected_file, 'w') as fp:
+        #    fp.write('\n'.join(result))
 
         with open(expected_file, 'rb') as fp:
             expected = fp.read().decode('utf-8').replace('\r', '').split('\n')

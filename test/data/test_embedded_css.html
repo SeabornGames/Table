@@ -1,0 +1,170 @@
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.23/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/fixedcolumns/3.3.1/css/fixedColumns.dataTables.css">
+
+<style type="text/css" className="init">
+td {white-space: nowrap;}
+thead tr th a:visited { color: black; }
+table#seaborn_table.dataTable tbody tr:hover {background-color: #dfe7f2;}
+table#seaborn_table.dataTable tbody tr:hover > .sorting_1 {background-color: #dfe7f2;}
+#new-search-area {
+    width: 100%;
+    clear: both;
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+#new-search-area input {
+    width: 600px;
+    font-size: 20px;
+    padding: 5px;
+}
+</style>
+<div id="fade" style="position: absolute; z-index: 1000; width:100%;height:100%;background-color: white;"></div>
+
+<table id="seaborn_table" class="stripe row-border order-column cell-border" style="width:100%">
+       <thead>
+<tr bgcolor="#bcbcbc"align="center">
+    <th>#</th>
+    <th>column 1</th>
+    <th>col2</th>
+    <th>column 3</th>
+    <th>output column </th>
+    <th>output col2</th>
+  </tr></thead>
+  <tbody>
+<tr align="center">
+    <td>0</td>
+    <td>1</td>
+    <td>Hello</td>
+    <td>a</td>
+    <td/>
+    <td>1</td>
+  </tr>
+  <tr align="center">
+    <td>1</td>
+    <td>2</td>
+    <td>Hello</td>
+    <td>a</td>
+    <td/>
+    <td>2</td>
+  </tr>
+  <tr align="center">
+    <td>2</td>
+    <td>1</td>
+    <td>World</td>
+    <td>a</td>
+    <td/>
+    <td>1</td>
+  </tr>
+  <tr align="center">
+    <td>3</td>
+    <td>2</td>
+    <td>World</td>
+    <td>a</td>
+    <td/>
+    <td>2</td>
+  </tr>
+  <tr align="center">
+    <td>4</td>
+    <td>2</td>
+    <td>Hello</td>
+    <td>b</td>
+    <td/>
+    <td>2</td>
+  </tr>
+  <tr align="center">
+    <td>5</td>
+    <td>1</td>
+    <td>World</td>
+    <td>b</td>
+    <td/>
+    <td>1</td>
+  </tr>
+  <tr align="center">
+    <td>6</td>
+    <td>2</td>
+    <td>World</td>
+    <td>b</td>
+    <td/>
+    <td>2</td>
+  </tr>
+  <tr align="center">
+    <td>7</td>
+    <td>1</td>
+    <td>Hello</td>
+    <td>c</td>
+    <td/>
+    <td>1</td>
+  </tr>
+  <tr align="center">
+    <td>8</td>
+    <td>2</td>
+    <td>Hello</td>
+    <td>c</td>
+    <td/>
+    <td>2</td>
+  </tr>
+  <tr align="center">
+    <td>9</td>
+    <td>1</td>
+    <td>World</td>
+    <td>c</td>
+    <td/>
+    <td>1</td>
+  </tr>
+  <tr align="center">
+    <td>10</td>
+    <td>2</td>
+    <td>World</td>
+    <td>c</td>
+    <td/>
+    <td>2</td>
+  </tr>
+  </tbody>
+  <tfoot>
+    <tr>
+      <th>#</th>
+      <th>column 1</th>
+      <th>col2</th>
+      <th>column 3</th>
+      <th>output column </th>
+      <th>output col2</th>
+    </tr>
+  </tfoot>
+</table>
+
+<div style="float:left;">
+<br><button onClick="window.location.reload();" style="display: inline-block;border: 1px solid grey;">Clear Filters</button>
+</div>
+<div style="float:right;">
+<div id="new-search-area"></div>
+</div>
+
+<script type="text/javascript" language="javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
+<script type="text/javascript" language="javascript" src="https://cdn.datatables.net/1.10.23/js/jquery.dataTables.js"></script>
+<script type="text/javascript" language="javascript" src="https://cdn.datatables.net/fixedcolumns/3.3.1/js/dataTables.fixedColumns.js"></script>
+
+<script type="text/javascript" language="javascript" className="init">
+  $(document).ready(function () {
+     $("#fade").fadeOut("slow");
+    $('#seaborn_table tfoot th').each(function (i) {
+      var title = $('#seaborn_table thead th').eq($(this).index()).text();
+      $(this).html('<input type="text" placeholder="Search ' + title + '" data-index="' + i + '" />');
+    });
+
+    var table = $('#seaborn_table').DataTable({
+      scrollY: Math.floor(window.innerHeight * 0.75).toString() + 'px',
+      scrollX: true,
+      scrollCollapse: true,
+      paging: false,
+      fixedColumns: true,
+    });
+
+    $(table.table().container()).on('keyup', 'tfoot input', function () {
+      table
+              .column($(this).data('index'))
+              .search(this.value)
+              .draw();
+    });
+    $("#seaborn_table_filter").detach().appendTo('#new-search-area');
+  });
+</script>
