@@ -111,6 +111,7 @@ class SeabornTable(object):
     KNOWN_FORMATS = ['md', 'txt', 'psql', 'rst', 'html', 'grid', 'json', 'csv',
                      'yaml']
     DEFAULT_DELIMINATOR = u'\t'
+    DEFAULT_EMBED_CSS = False
     DEFAULT_TAB = u''
     ENCODING = 'utf-8'
     FANCY = {
@@ -1230,7 +1231,8 @@ class SeabornTable(object):
 
     def obj_to_html(self, file_path=None, tab='', border=1, cell_padding=5,
                     cell_spacing=1, border_color='black', align='center',
-                    row_span=None, quote_numbers=True, **kwargs):
+                    row_span=None, quote_numbers=True, embed_css=False,
+                    background_color='#dfe7f2', **kwargs):
         """
         This will return a str of an html table.
         :param file_path:       str for path to the file
@@ -1243,27 +1245,37 @@ class SeabornTable(object):
         :param row_span:        list of rows to span
         :param quote_numbers:   bool if True will quote numbers that are strings
         :param quote_empty_str: bool if True will quote empty strings
+        :param embed_css:       bool if True css will be embed to make the table
+                                more spreadsheet like with filters and sorters
+        param background_color: str of the odd rows a value of None is ignored
         :return: str of html code
         """
+        embed_css = self.DEFAULT_EMBED_CSS if embed_css is None else embed_css
         html_table = self._html_link_cells()
         html_table._html_row_respan(row_span)
         data = [self._html_row(html_table.columns, tab + '  ', '#bcbcbc',
-                               align=align, quote_numbers=quote_numbers)]
+                               align=align, quote_numbers=quote_numbers,
+                               cell_type='h')]
         for i, row in enumerate(html_table):
-            color = '#dfe7f2' if i % 2 else None
+            color = background_color if i % 2 and not embed_css else None
             row = [row[c] for c in html_table.columns]
             data.append(self._html_row(row, tab + '  ', color, align=align,
-                                       quote_numbers=quote_numbers))
+                                       quote_numbers=quote_numbers,
+                                       cell_type='d'))
 
-        ret = '''
-            <table border="%s" cellpadding="%s" cellspacing="%s"
-                   bordercolor="%s" >
-              %s
-            </table>'''.strip().replace('\n            ', '\n')
-
-        data = ('\n%s  ' % tab).join(data)
-        ret = (ret % (border, cell_padding, cell_spacing, border_color, data)
-               ).replace('\n', '\n%s' % tab)
+        if embed_css:
+            ret = CSS_HTML_TEMPLATE_HEADER + data[0] + '<thead>\n  <tbody>\n'
+            ret += ('\n%s  ' % tab).join(data[1:])
+            ret += '\n  </tbody>\n  <tfoot>\n    <tr>\n      <th>'
+            ret += '</th>\n      <th>'.join([c for c in html_table.columns])
+            ret += CSS_HTML_TEMPLATE_FOOTER
+        else:
+            data = ('\n%s  ' % tab).join(data)
+            ret = BASIC_HTML_TEMPLATE.format(border=border,
+                                             cell_padding=cell_padding,
+                                             cell_spacing=cell_spacing,
+                                             border_color=border_color,
+                                             data=data)
         self._save_file(file_path, ret)
         return ret
 
@@ -2490,21 +2502,22 @@ class SeabornTable(object):
             fp.write(text)
 
     @classmethod
-    def _html_cell(cls, cell, quote_numbers=True):
-        head = '<th'
+    def _html_cell(cls, cell, quote_numbers=True, cell_type='h',
+                   attribute=' align="left"'):
+        head = '<t%s'%cell_type
         if isinstance(cell, HTMLRowRespan):
             if cell.count == 0:
                 return ''
             head = '<th rowspan="%s"' % cell.count
 
-        if cell is None:
+        if cell is None or cell == '':
             return '%s/>' % head
 
         cell = cls._safe_str(cell, quote_numbers=quote_numbers)
         if '\n' not in cell:
-            return '%s>%s</th>' % (head, cell)
-        return '%s align="left">%s</th>' % (
-            head, cell.replace('\n', '<br>'))
+            return '%s>%s</t%s>' % (head, cell, cell_type)
+        return '%s%s>%s</t%s>' % (
+            head, attribute, cell.replace('\n', '<br>'), cell_type)
 
     def _html_link_cells(self):
         """
@@ -2527,6 +2540,7 @@ class SeabornTable(object):
         if not row_span or len(self) < 2:
             return
         i = 0
+        j = None
         while i < len(self):
             for j, row in enumerate(self[i + 1:], i + 1):
                 differences = [c for c in row_span if self[i][c] != row[c]]
@@ -2538,8 +2552,8 @@ class SeabornTable(object):
             i = j if i != j else i + 1
 
     def _html_row(self, row, tab='  ', background_color=None, header='',
-                  align='center', quote_numbers=True):
-        data = [self._html_cell(cell, quote_numbers=quote_numbers)
+                  align='center', quote_numbers=True, **kwargs):
+        data = [self._html_cell(cell, quote_numbers=quote_numbers, **kwargs)
                 for cell in row]
 
         if background_color is not None:
@@ -2682,6 +2696,84 @@ def main(cli_args=sys.argv[1:]):
     else:
         table.obj_to_file(args.destination, break_line=args.break_line,
                           quote_numbers=not args.skip_eval)
+
+CSS_HTML_TEMPLATE_HEADER = '''
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.23/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/fixedcolumns/3.3.1/css/fixedColumns.dataTables.css">
+
+<style type="text/css" className="init">
+td {white-space: nowrap;}
+thead tr th a:visited { color: black; }
+table#seaborn_table.dataTable tbody tr:hover {background-color: #dfe7f2;}
+table#seaborn_table.dataTable tbody tr:hover > .sorting_1 {background-color: #dfe7f2;}
+#new-search-area {
+    width: 100%;
+    clear: both;
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+#new-search-area input {
+    width: 600px;
+    font-size: 20px;
+    padding: 5px;
+}
+</style>
+<div id="fade" style="position: absolute; z-index: 1000; width:100%;height:100%;background-color: white;"></div>
+
+<table id="seaborn_table" class="stripe row-border order-column cell-border" style="width:100%">
+       <thead>
+'''.lstrip()
+
+CSS_HTML_TEMPLATE_FOOTER = '''
+</th>
+    </tr>
+  </tfoot>
+</table>
+
+<div style="float:left;">
+<br><button onClick="window.location.reload();" style="display: inline-block;border: 1px solid grey;">Clear Filters</button>
+</div>
+<div style="float:right;">
+<div id="new-search-area"></div>
+</div>
+
+<script type="text/javascript" language="javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
+<script type="text/javascript" language="javascript" src="https://cdn.datatables.net/1.10.23/js/jquery.dataTables.js"></script>
+<script type="text/javascript" language="javascript" src="https://cdn.datatables.net/fixedcolumns/3.3.1/js/dataTables.fixedColumns.js"></script>
+
+<script type="text/javascript" language="javascript" className="init">
+  $(document).ready(function () {
+     $("#fade").fadeOut("slow");
+    $('#seaborn_table tfoot th').each(function (i) {
+      var title = $('#seaborn_table thead th').eq($(this).index()).text();
+      $(this).html('<input type="text" placeholder="Search ' + title + '" data-index="' + i + '" />');
+    });
+
+    var table = $('#seaborn_table').DataTable({
+      scrollY: Math.floor(window.innerHeight * 0.75).toString() + 'px',
+      scrollX: true,
+      scrollCollapse: true,
+      paging: false,
+      fixedColumns: true,
+    });
+
+    $(table.table().container()).on('keyup', 'tfoot input', function () {
+      table
+              .column($(this).data('index'))
+              .search(this.value)
+              .draw();
+    });
+    $("#seaborn_table_filter").detach().appendTo('#new-search-area');
+  });
+</script>
+'''.strip()
+
+BASIC_HTML_TEMPLATE = '''
+<table border="{border}" cellpadding="{cell_padding}"
+       cellspacing="{cell_spacing}" bordercolor="{border_color}" >
+  {data}
+</table>
+'''.strip()
 
 
 if __name__ == '__main__':
