@@ -1,3 +1,12 @@
+Changes in 6.7.0
+================
+
+* Header cells within and HTML table will be marked with ``th`` instead of
+  ``td``.
+
+* Empty cells will be marked with ``<td/>`` instead of ``<td></td>``.
+
+
 Changes in 6.6.0
 ================
 

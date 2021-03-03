@@ -151,12 +151,22 @@ class ExampleTableTest(BaseTest):
 
     def test_html(self):
         table = self.test_pertibate()
+        result_file = self.get_data_path('_result', 'test_pertibate.html')
+        table.obj_to_html(file_path=result_file)
         answer_file = self.get_data_path('test_pertibate.html')
         with open(answer_file, 'r') as f:
             answer = f.read()
-        result_file = self.get_data_path('_result', 'test_pertibate.html')
-        table.obj_to_html(file_path=result_file)
         self.assertEqual(answer, table.obj_to_html())
+        self.remove_file(result_file)
+
+    def test_html_with_embeded_css(self):
+        table = self.test_pertibate()
+        result_file = self.get_data_path('result', 'test_embedded_css.html')
+        table.obj_to_html(file_path=result_file, embed_css=True)
+        answer_file = self.get_data_path('test_embedded_css.html')
+        with open(answer_file, 'r') as f:
+            answer = f.read()
+        self.assertEqual(answer, table.obj_to_html(embed_css=True))
         self.remove_file(result_file)
 
     def test_mark_down(self):
