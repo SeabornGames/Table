@@ -569,15 +569,18 @@ class SeabornTable(object):
 
     @classmethod
     def psql_to_obj(cls, file_path=None, text='', remove_empty_rows=True,
-                    deliminator=' | ', eval_cells=True, **kwargs):
+                    deliminator=' | ', eval_cells=True, assume_header=True,
+                    **kwargs):
         """
         This will convert a psql file or text to a seaborn table
-        :param file_path:   str of the path to the file
-        :param text:        str of the csv text
+        :param file_path:     str of the path to the file
+        :param text:          str of the csv text
         :param remove_empty_rows: bool if True will remove empty rows
-        :param deliminator: str to use as a deliminator
-        :param eval_cells:  bool if True will try to evaluate numbers
-        :param kwargs:      dictionary of values __init__ can take.
+        :param deliminator:   str to use as a deliminator
+        :param eval_cells:    bool if True will try to evaluate numbers
+        :param assume_header: if True will only split the rows based on the
+                              number of columns in the header.
+        :param kwargs:        dictionary of values __init__ can take.
         :return: SeabornTable
         """
         text = cls._get_lines(file_path, text)
@@ -587,8 +590,9 @@ class SeabornTable(object):
         if not text[1].replace('+', '').replace('-', '').strip():
             text.pop(1)  # get rid of bar
 
+        col_count = len(text[0].split(deliminator)) if assume_header else None
         list_of_list = [[cls._eval_cell(cell, _eval=eval_cells)
-                         for cell in row.split(deliminator)]
+                         for cell in row.split(deliminator, col_count-1)]
                         for row in text if not remove_empty_rows or
                         True in [bool(r) for r in row]]
 
