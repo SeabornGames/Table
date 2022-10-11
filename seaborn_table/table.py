@@ -33,6 +33,7 @@ class SeabornRow(list):
         super(SeabornRow, self).__init__(
             values + [None] * (len(column_index) - len(values)))
         self.column_index = column_index
+        self._highlights = []
 
     def __getitem__(self, item):
         if isinstance(item, (int, slice)):
@@ -55,6 +56,23 @@ class SeabornRow(list):
 
     def __str__(self):
         return super(SeabornRow, self).__str__()
+
+    def highlight(self, index=None, key=None, text_color=None, text_bold=False,
+                  cell_color=None, link=None):
+        """
+            This method will allow for highlight a cell or cell text when saving
+            the table as HTML.  The last highlighted text / cell will be used.
+        :param index:      int reference to the row's cell through index
+        :param key:        int reference to the row's cell through dict key
+        :param text_color: str color to make the text see Seaborn.HTML_COLORS
+        :param cell_color: str color to make the cell see Seaborn.HTML_COLORS
+        :aram:link_text:   str of text to link
+        :param link:       str link the cell contents
+        :return:           None
+        """
+        self._highlights.append(
+            dict(index=index, key=key, text_color=text_color,
+                 text_bold=text_bold, cell_color=cell_color))
 
     @classmethod
     def dict_to_obj(cls, column_index, kwargs):
@@ -138,6 +156,9 @@ class SeabornTable(object):
         'bottom left intersect': u'╘',
         'bottom right corner': u'╛',
     }
+    HTML_COLORS = dict(
+
+    )
 
     def __init__(self, table=None, columns=None, row_columns=None, tab=None,
                  key_on=None, column_key=None, deliminator=None,
