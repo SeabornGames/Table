@@ -1,3 +1,13 @@
+Changes in 6.7.1
+================
+
+* ``psql_to_obj`` now assumes the number of columns equal to the header.
+  If a column could have the `` | `` deliminator then the safest thing to do
+  would be to make it the last column.  If multiple columns could have the
+  `` | ``, then it will need to be fixed before hand.  This feature can be
+  turned off with option ``assume_header`` = False.
+
+
 Changes in 6.7.0
 ================
 
